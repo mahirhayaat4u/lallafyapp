@@ -1,0 +1,1043 @@
+import 'dart:async';
+import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+
+import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_text_styles.dart';
+import '../../core/theme/app_theme.dart';
+import '../../core/widgets/loading_widget.dart';
+import '../../core/widgets/error_widget.dart';
+import '../../providers/auth_provider.dart';
+import '../../providers/homepage_provider.dart';
+import '../../providers/cart_provider.dart';
+import '../../models/category.dart';
+import '../../models/homepage_card.dart';
+
+import 'widgets/banner_carousel.dart';
+import 'widgets/category_circles.dart';
+import 'widgets/homepage_section.dart';
+import 'widgets/product_card.dart';
+import 'widgets/birthday_special_section.dart';
+import 'widgets/occasion_tabs_section.dart';
+import 'widgets/gifting_stories_section.dart';
+import 'widgets/relationship_section.dart';
+
+/// Home Screen — The real homepage with API-driven content
+///
+/// 💡 Mirrors HomePage.tsx layout:
+/// 1. Categories quicklinks
+/// 2. Hero banner carousel
+/// 3. Birthday Special (banner + grid)
+/// 4. Featured products
+/// 5. Flower cards section
+/// 6. Occasion Tabs (tabbed product carousel)
+/// 7. Gifting Stories (Instagram-style)
+/// 8. Relationship cards section
+/// 9. Luxury cards section
+/// 10. Personalize cards section
+/// 11. Combo cards section
+class HomeScreen extends ConsumerStatefulWidget {
+  const HomeScreen({super.key});
+
+  @override
+  ConsumerState<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends ConsumerState<HomeScreen>
+    with TickerProviderStateMixin {
+  // Animation controller for smooth curve movement
+  late AnimationController _curveAnimController;
+  late Animation<double> _curveAnimation;
+
+  // Track tab positions: key = tab index, value = (left, width)
+  final Map<int, _TabMetrics> _tabMetrics = {};
+  double _currentCurveLeft = 0;
+  double _currentCurveWidth = 80;
+  double _targetCurveLeft = 0;
+  double _targetCurveWidth = 80;
+
+  // ScrollController for the tab ListView
+  final ScrollController _tabScrollController = ScrollController();
+
+  @override
+  void initState() {
+    super.initState();
+    _curveAnimController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
+    );
+    _curveAnimation = CurvedAnimation(
+      parent: _curveAnimController,
+      curve: Curves.easeInOut,
+    );
+    _curveAnimController.addListener(() {
+      setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    _curveAnimController.dispose();
+    _tabScrollController.dispose();
+    super.dispose();
+  }
+
+  /// Animate curve to a specific tab
+  void _animateToTab(int index, List<Category> categories) {
+    final metrics = _tabMetrics[index];
+    if (metrics == null) return;
+
+    _currentCurveLeft = _animatedCurveLeft;
+    _currentCurveWidth = _animatedCurveWidth;
+    _targetCurveLeft = metrics.left;
+    _targetCurveWidth = metrics.width;
+
+    _curveAnimController.reset();
+    _curveAnimController.forward();
+
+    // Update selected index in provider
+    ref.read(selectedCategoryIndexProvider.notifier).state = index;
+
+    // Auto-scroll the tab into view
+    _scrollTabIntoView(index);
+  }
+
+  void _scrollTabIntoView(int index) {
+    final metrics = _tabMetrics[index];
+    if (metrics == null || !_tabScrollController.hasClients) return;
+
+    final viewportWidth = _tabScrollController.position.viewportDimension;
+    final scrollOffset = _tabScrollController.offset;
+    final tabLeft = metrics.left;
+    final tabRight = metrics.left + metrics.width;
+
+    if (tabLeft < scrollOffset) {
+      _tabScrollController.animateTo(
+        tabLeft,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
+    } else if (tabRight > scrollOffset + viewportWidth) {
+      _tabScrollController.animateTo(
+        tabRight - viewportWidth + 24,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
+    }
+  }
+
+  double get _animatedCurveLeft {
+    if (!_curveAnimController.isAnimating && _curveAnimController.isCompleted) {
+      return _targetCurveLeft;
+    }
+    return _currentCurveLeft +
+        (_targetCurveLeft - _currentCurveLeft) * _curveAnimation.value;
+  }
+
+  double get _animatedCurveWidth {
+    if (!_curveAnimController.isAnimating && _curveAnimController.isCompleted) {
+      return _targetCurveWidth;
+    }
+    return _currentCurveWidth +
+        (_targetCurveWidth - _currentCurveWidth) * _curveAnimation.value;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final authState = ref.watch(authProvider);
+    final cartItems = ref.watch(cartProvider).totalItems;
+    final selectedIndex = ref.watch(selectedCategoryIndexProvider);
+    final categoriesAsync = ref.watch(categoriesProvider);
+
+    return Scaffold(
+      backgroundColor: AppColors.bg,
+      body: SafeArea(
+        child: RefreshIndicator(
+          color: AppColors.primary,
+          onRefresh: () async {
+            ref.invalidate(bannersProvider);
+            ref.invalidate(categoriesProvider);
+            ref.invalidate(featuredProductsProvider);
+            ref.invalidate(flowerCardsProvider);
+            ref.invalidate(relationshipCardsProvider);
+            ref.invalidate(luxuryCardsProvider);
+            ref.invalidate(personalizeCardsProvider);
+            ref.invalidate(comboCardsProvider);
+            ref.invalidate(occasionTabsProvider);
+            ref.invalidate(giftingStoriesProvider);
+          },
+          child: CustomScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            slivers: [
+              // ── Sticky Header ──
+              SliverToBoxAdapter(
+                child: _buildHeader(context, ref, authState, cartItems, categoriesAsync, selectedIndex),
+              ),
+
+              // ── Body Sections ──
+              SliverToBoxAdapter(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 4),
+
+                    // ── 1. Subcategories (children of selected parent) ──
+                    _SubcategoriesSection(selectedIndex: selectedIndex),
+
+              const SizedBox(height: 20),
+
+              // ── 2. Hero banner carousel ──
+              _BannersSection(),
+
+              const SizedBox(height: 32),
+
+              // ── 3. Birthday Special ──
+              const BirthdaySpecialSection(),
+
+              const SizedBox(height: 32),
+
+              // ── 4. Featured / Trending Products ──
+              _FeaturedProductsSection(),
+
+              const SizedBox(height: 32),
+
+              // ── 5. Flower Cards ──
+              _HomepageCardsSection(
+                provider: flowerCardsProvider,
+                label: 'Fresh Blooms',
+                title: 'Beautiful Flower Arrangements',
+                subtitle: 'Hand-picked flowers for every occasion',
+              ),
+
+              const SizedBox(height: 32),
+
+              // ── 6. Occasion Tabs ──
+              const OccasionTabsSection(),
+
+              const SizedBox(height: 32),
+
+              // ── 7. Gifting Stories ──
+              const GiftingStoriesSection(),
+
+              const SizedBox(height: 32),
+
+              // ── 8. Relationship Cards ──
+              const RelationshipSection(),
+
+              const SizedBox(height: 32),
+
+              // ── 9. Luxury Cards ──
+              _HomepageCardsSection(
+                provider: luxuryCardsProvider,
+                label: 'Premium Collection',
+                title: 'Explore Luxury Gifts',
+                subtitle: 'Curated premium selections',
+                cardHeight: 220,
+              ),
+
+              const SizedBox(height: 32),
+
+              // ── 10. Personalize Cards ──
+              _HomepageCardsSection(
+                provider: personalizeCardsProvider,
+                label: 'Make It Special',
+                title: 'Personalized Gifts',
+                subtitle: 'Add a personal touch',
+              ),
+
+              const SizedBox(height: 32),
+
+              // ── 11. Combo Cards ──
+              _HomepageCardsSection(
+                provider: comboCardsProvider,
+                label: 'Gift Together',
+                title: 'Combo Gift Sets',
+                subtitle: 'More value, more joy',
+              ),
+
+              const SizedBox(height: 40),
+
+              // ── Footer ──
+              _buildFooter(context),
+
+              const SizedBox(height: 24),
+            ],
+          ),
+        ),
+      ],
+    ),
+  ),
+),
+);
+  }
+
+
+  Widget _buildHeader(BuildContext context, WidgetRef ref, dynamic authState, int cartItems, AsyncValue<List<Category>> categoriesAsync, int selectedIndex) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // --- Row 1: Logo & Actions (Padded horizontally) ---
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                // Logo
+                Image.asset(
+                  'assets/images/giftswale.jpg',
+                  height: 42,
+                  fit: BoxFit.contain,
+                  errorBuilder: (context, error, stackTrace) {
+                    return Text(
+                      'GiftsWale',
+                      style: AppTextStyles.h2.copyWith(
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    );
+                  },
+                ),
+                Row(
+                  children: [
+                    // Notification
+                    Stack(
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.notifications_none_rounded, color: AppColors.text, size: 26),
+                          onPressed: () {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('No new notifications')),
+                            );
+                          },
+                        ),
+                        Positioned(
+                          right: 8,
+                          top: 8,
+                          child: Container(
+                            padding: const EdgeInsets.all(2),
+                            decoration: BoxDecoration(
+                              color: AppColors.danger,
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            constraints: const BoxConstraints(
+                              minWidth: 12,
+                              minHeight: 12,
+                            ),
+                            child: const Text(
+                              '2',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 8,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    // Wishlist
+                    IconButton(
+                      icon: const Icon(Icons.favorite_border_rounded, color: AppColors.text, size: 26),
+                      onPressed: () => context.push('/wishlist'),
+                    ),
+                    // Cart
+                    Stack(
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.shopping_bag_outlined, color: AppColors.text, size: 26),
+                          onPressed: () => context.go('/cart'),
+                        ),
+                        if (cartItems > 0)
+                          Positioned(
+                            right: 6,
+                            top: 6,
+                            child: Container(
+                              padding: const EdgeInsets.all(3),
+                              decoration: const BoxDecoration(
+                                color: AppColors.primary,
+                                shape: BoxShape.circle,
+                              ),
+                              constraints: const BoxConstraints(
+                                minWidth: 16,
+                                minHeight: 16,
+                              ),
+                              child: Text(
+                                '$cartItems',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                    // Profile
+                    IconButton(
+                      icon: const Icon(Icons.person_outline_rounded, color: AppColors.text, size: 26),
+                      onPressed: () => context.push('/profile'),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
+
+          // --- Row 2: Search Bar (Padded horizontally) ---
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: GestureDetector(
+              onTap: () => context.push('/search'),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(30),
+                  border: Border.all(color: Colors.black.withValues(alpha: 0.05), width: 1),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.06),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.search_rounded,
+                      color: Color(0xFFEF476F),
+                      size: 26,
+                    ),
+                    const SizedBox(width: 14),
+                    const Expanded(
+                      child: _AnimatedSearchHint(),
+                    ),
+                    const Icon(
+                      Icons.mic_none_rounded,
+                      color: Color(0xFF5E5E6A),
+                      size: 24,
+                    ),
+                    const SizedBox(width: 14),
+                    const Icon(
+                      Icons.camera_alt_outlined,
+                      color: Color(0xFF5E5E6A),
+                      size: 24,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          // --- Row 3: Dynamic Category Tabs with Animated Curve ---
+          categoriesAsync.when(
+            data: (categories) {
+              if (categories.isEmpty) return const SizedBox(height: 38);
+              return _buildAnimatedTabBar(context, categories, selectedIndex);
+            },
+            loading: () => const SizedBox(
+              height: 38,
+              child: Center(
+                child: SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 1.5, color: AppColors.primary),
+                ),
+              ),
+            ),
+            error: (_, _) => const SizedBox(height: 38),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAnimatedTabBar(BuildContext context, List<Category> categories, int selectedIndex) {
+    // Clamp selectedIndex to valid range
+    final safeIndex = selectedIndex.clamp(0, categories.length - 1);
+
+    return SizedBox(
+      height: 38,
+      child: Stack(
+        children: [
+          // Bottom Pink Line (stays fixed under the scroll view)
+          Positioned(
+            bottom: 0,
+            left: 0,
+            right: 0,
+            child: Container(
+              height: 1.5,
+              color: const Color(0xFFEF476F),
+            ),
+          ),
+
+          // Scrollable area (spans full screen width)
+          Positioned.fill(
+            child: SingleChildScrollView(
+              controller: _tabScrollController,
+              scrollDirection: Axis.horizontal,
+              clipBehavior: Clip.none,
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  // Animated Curve Indicator (inside scroll view so it scrolls with the tabs)
+                  Positioned(
+                    bottom: 0,
+                    left: _animatedCurveLeft,
+                    child: SizedBox(
+                      width: _animatedCurveWidth,
+                      height: 38,
+                      child: CustomPaint(
+                        painter: TabCurvePainter(
+                          strokeColor: const Color(0xFFEF476F),
+                          fillColor: Colors.white,
+                          R: 24,
+                          strokeWidth: 1.5,
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  // Tab items Row with end padding
+                  Padding(
+                    padding: const EdgeInsets.only(right: 16),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: List.generate(categories.length, (index) {
+                        final cat = categories[index];
+                        final isActive = index == safeIndex;
+                        return _TabMeasurer(
+                          index: index,
+                          onMeasured: (left, width) {
+                            final newMetrics = _TabMetrics(left: left, width: width);
+                            if (_tabMetrics[index] != newMetrics) {
+                              _tabMetrics[index] = newMetrics;
+                              // Set initial position for first tab
+                              if (index == safeIndex && !_curveAnimController.isCompleted && !_curveAnimController.isAnimating) {
+                                WidgetsBinding.instance.addPostFrameCallback((_) {
+                                  if (mounted) {
+                                    setState(() {
+                                      _currentCurveLeft = left;
+                                      _currentCurveWidth = width;
+                                      _targetCurveLeft = left;
+                                      _targetCurveWidth = width;
+                                    });
+                                  }
+                                });
+                              }
+                            }
+                          },
+                          child: GestureDetector(
+                            onTap: () => _animateToTab(index, categories),
+                            child: Container(
+                              margin: const EdgeInsets.only(right: 4),
+                              padding: const EdgeInsets.symmetric(horizontal: 24),
+                              alignment: Alignment.center,
+                              child: Text(
+                                cat.name.toUpperCase(),
+                                style: TextStyle(
+                                  fontFamily: 'Outfit',
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w500,
+                                  letterSpacing: 1.2,
+                                  color: isActive
+                                      ? const Color(0xFF0F172A)
+                                      : const Color(0xFF64748B),
+                                ),
+                              ),
+                            ),
+                          ),
+                        );
+                      }),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFooter(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.symmetric(horizontal: AppTheme.pagePadding),
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: AppColors.bgSurface,
+        borderRadius: BorderRadius.circular(AppTheme.radiusXl),
+      ),
+      child: Column(
+        children: [
+          Image.asset(
+            'assets/images/giftswale.jpg',
+            height: 48,
+            fit: BoxFit.contain,
+            errorBuilder: (context, error, stackTrace) => const Icon(
+              Icons.card_giftcard_rounded,
+              size: 32,
+              color: AppColors.primary,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text('GiftsWale', style: AppTextStyles.h3),
+          const SizedBox(height: 4),
+          Text(
+            'Gift Your Loved Ones ❤️',
+            style:
+                AppTextStyles.bodySm.copyWith(color: AppColors.textMuted),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── Tab Metrics Helper ─────────────────────────────────────────
+
+/// Stores the measured position and width of a tab
+class _TabMetrics {
+  final double left;
+  final double width;
+
+  const _TabMetrics({required this.left, required this.width});
+
+  @override
+  bool operator ==(Object other) =>
+      other is _TabMetrics && other.left == left && other.width == width;
+
+  @override
+  int get hashCode => Object.hash(left, width);
+}
+
+/// Measures a tab's position after layout and reports it
+class _TabMeasurer extends StatefulWidget {
+  final int index;
+  final void Function(double left, double width) onMeasured;
+  final Widget child;
+
+  const _TabMeasurer({
+    required this.index,
+    required this.onMeasured,
+    required this.child,
+  });
+
+  @override
+  State<_TabMeasurer> createState() => _TabMeasurerState();
+}
+
+class _TabMeasurerState extends State<_TabMeasurer> {
+  final GlobalKey _key = GlobalKey();
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _measure());
+  }
+
+  @override
+  void didUpdateWidget(covariant _TabMeasurer oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _measure());
+  }
+
+  void _measure() {
+    final renderBox = _key.currentContext?.findRenderObject() as RenderBox?;
+    if (renderBox == null || !renderBox.hasSize) return;
+
+    // Get position relative to the Stack (the tab bar)
+    final stackRenderBox = context.findAncestorRenderObjectOfType<RenderStack>();
+    if (stackRenderBox == null) return;
+
+    final offset = renderBox.localToGlobal(Offset.zero, ancestor: stackRenderBox);
+    widget.onMeasured(offset.dx, renderBox.size.width);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return KeyedSubtree(
+      key: _key,
+      child: widget.child,
+    );
+  }
+}
+
+// ─── Private Section Widgets ─────────────────────────────────────
+
+/// Shows subcategories (children) of the selected parent category
+class _SubcategoriesSection extends ConsumerWidget {
+  final int selectedIndex;
+
+  const _SubcategoriesSection({required this.selectedIndex});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final categoriesAsync = ref.watch(categoriesProvider);
+
+    return categoriesAsync.when(
+      data: (categories) {
+        if (categories.isEmpty) return const SizedBox.shrink();
+        final safeIndex = selectedIndex.clamp(0, categories.length - 1);
+        final parentCategory = categories[safeIndex];
+        final children = parentCategory.children;
+
+        if (children.isEmpty) {
+          // No subcategories — show nothing or a subtle message
+          return const SizedBox.shrink();
+        }
+
+        return AnimatedSwitcher(
+          duration: const Duration(milliseconds: 300),
+          transitionBuilder: (child, animation) => FadeTransition(
+            opacity: animation,
+            child: SlideTransition(
+              position: Tween<Offset>(
+                begin: const Offset(0.05, 0),
+                end: Offset.zero,
+              ).animate(CurvedAnimation(parent: animation, curve: Curves.easeOut)),
+              child: child,
+            ),
+          ),
+          child: CategoryCircles(
+            key: ValueKey(parentCategory.id),
+            categories: children,
+            onCategoryTap: (slug) {
+              context.push('/shop?category=$slug');
+            },
+          ),
+        );
+      },
+      loading: () => const SizedBox(
+        height: 110,
+        child: Center(
+          child: SizedBox(
+            width: 20,
+            height: 20,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              color: AppColors.primary,
+            ),
+          ),
+        ),
+      ),
+      error: (_, _) => const SizedBox.shrink(),
+    );
+  }
+}
+
+
+class _BannersSection extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final bannersAsync = ref.watch(bannersProvider);
+
+    return bannersAsync.when(
+      data: (banners) => BannerCarousel(
+        banners: banners,
+        onBannerTap: (link) {
+          context.push(link ?? '/shop');
+        },
+      ),
+      loading: () => Container(
+        height: 180,
+        margin: const EdgeInsets.symmetric(horizontal: 16),
+        decoration: BoxDecoration(
+          color: AppColors.bgElevated,
+          borderRadius: BorderRadius.circular(AppTheme.radiusLg),
+        ),
+        child: const Center(
+          child: CircularProgressIndicator(
+            color: AppColors.primary,
+            strokeWidth: 2,
+          ),
+        ),
+      ),
+      error: (_, _) => const SizedBox.shrink(),
+    );
+  }
+}
+
+class _FeaturedProductsSection extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final productsAsync = ref.watch(featuredProductsProvider);
+
+    return productsAsync.when(
+      data: (products) {
+        if (products.isEmpty) return const SizedBox.shrink();
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(
+                  horizontal: AppTheme.pagePadding),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'TRENDING NOW',
+                    style: AppTextStyles.sectionLabel,
+                  ),
+                  const SizedBox(height: 4),
+                  Text('Featured Gifts', style: AppTextStyles.h2),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Most loved by our customers',
+                    style: AppTextStyles.bodySm
+                        .copyWith(color: AppColors.textMuted),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              height: 300,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(
+                    horizontal: AppTheme.pagePadding),
+                itemCount: products.length,
+                separatorBuilder: (_, _) => const SizedBox(width: 14),
+                itemBuilder: (context, index) => ProductCard(
+                  product: products[index],
+                  onTap: () {
+                    context.push('/product/${products[index].slug}');
+                  },
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+      loading: () => const SizedBox(
+        height: 300,
+        child: LoadingWidget(message: 'Loading gifts...'),
+      ),
+      error: (err, _) => ErrorDisplayWidget(
+        message: err.toString(),
+        onRetry: () => ref.invalidate(featuredProductsProvider),
+      ),
+    );
+  }
+}
+
+class _HomepageCardsSection extends ConsumerWidget {
+  final FutureProvider<List<HomepageCard>> provider;
+  final String label;
+  final String title;
+  final String? subtitle;
+  final double cardHeight;
+
+  const _HomepageCardsSection({
+    required this.provider,
+    required this.label,
+    required this.title,
+    this.subtitle,
+    this.cardHeight = 200,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final cardsAsync = ref.watch(provider);
+
+    return cardsAsync.when(
+      data: (cards) {
+        if (cards.isEmpty) return const SizedBox.shrink();
+        return HomepageSection(
+          label: label,
+          title: title,
+          subtitle: subtitle,
+          cards: cards,
+          cardHeight: cardHeight,
+          onCardTap: (link, cardTitle) {
+            String route = link;
+            if (route.startsWith('/shop')) {
+              final uri = Uri.parse(route);
+              final queryParams = Map<String, String>.from(uri.queryParameters);
+              queryParams['title'] = cardTitle;
+              route = Uri(path: uri.path, queryParameters: queryParams).toString();
+            }
+            context.push(route);
+          },
+        );
+      },
+      loading: () => const SizedBox.shrink(),
+      error: (_, _) => const SizedBox.shrink(),
+    );
+  }
+}
+
+class _AnimatedSearchHint extends StatefulWidget {
+  const _AnimatedSearchHint();
+
+  @override
+  State<_AnimatedSearchHint> createState() => _AnimatedSearchHintState();
+}
+
+class _AnimatedSearchHintState extends State<_AnimatedSearchHint> {
+  final List<String> _hints = [
+    'Search for gifts...',
+    'Search for flowers...',
+    'Search for cakes...'
+  ];
+  int _currentIndex = 0;
+  late Timer _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _timer = Timer.periodic(const Duration(milliseconds: 2500), (timer) {
+      if (mounted) {
+        setState(() {
+          _currentIndex = (_currentIndex + 1) % _hints.length;
+        });
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 350),
+      transitionBuilder: (Widget child, Animation<double> animation) {
+        return FadeTransition(
+          opacity: animation,
+          child: SlideTransition(
+            position: Tween<Offset>(
+              begin: const Offset(0.0, 0.4),
+              end: Offset.zero,
+            ).animate(CurvedAnimation(
+              parent: animation,
+              curve: Curves.easeInOut,
+            )),
+            child: child,
+          ),
+        );
+      },
+      child: Align(
+        key: ValueKey<int>(_currentIndex),
+        alignment: Alignment.centerLeft,
+        child: Text(
+          _hints[_currentIndex],
+          style: AppTextStyles.body.copyWith(
+            color: const Color(0xFF5E5E6A),
+            fontWeight: FontWeight.w400,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class TabCurvePainter extends CustomPainter {
+  final Color strokeColor;
+  final Color fillColor;
+  final double strokeWidth;
+  final double R;
+
+  TabCurvePainter({
+    required this.strokeColor,
+    required this.fillColor,
+    this.strokeWidth = 1.5,
+    this.R = 24,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final double strokeW = strokeWidth;
+    final double bottomY = size.height - strokeW / 2; // 37.25 (exact center of the 1.5px baseline)
+    final double topY = strokeW / 2; // 0.75 (exact center of the 1.5px top stroke)
+    final double W = size.width - 2 * R;
+
+    // 1. Draw the fill for the active tab curve to mask the pink line beneath it
+    final fillPath = Path();
+    fillPath.moveTo(0, size.height); // Start at bottom-left corner of this curve's bounding box
+    
+    // Left side: baseline -> top
+    fillPath.cubicTo(
+      R * 0.55, bottomY,
+      R * 0.15, topY,
+      R, topY,
+    );
+    
+    // Flat top
+    fillPath.lineTo(R + W, topY);
+    
+    // Right side: top -> baseline
+    fillPath.cubicTo(
+      R + W + R * 0.85, topY,
+      R + W + R * 0.45, bottomY,
+      2 * R + W, bottomY, // which is size.width
+    );
+    
+    // Bottom-right corner of this curve's bounding box
+    fillPath.lineTo(size.width, size.height);
+    fillPath.close();
+
+    canvas.drawPath(
+      fillPath,
+      Paint()
+        ..color = fillColor
+        ..style = PaintingStyle.fill,
+    );
+
+    // 2. Draw the stroke for the curve
+    final strokePath = Path();
+    strokePath.moveTo(0, bottomY);
+    
+    // Left side
+    strokePath.cubicTo(
+      R * 0.55, bottomY,
+      R * 0.15, topY,
+      R, topY,
+    );
+    
+    // Flat top
+    strokePath.lineTo(R + W, topY);
+    
+    // Right side
+    strokePath.cubicTo(
+      R + W + R * 0.85, topY,
+      R + W + R * 0.45, bottomY,
+      2 * R + W, bottomY,
+    );
+
+    canvas.drawPath(
+      strokePath,
+      Paint()
+        ..color = strokeColor
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = strokeW
+        ..strokeCap = StrokeCap.round,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant TabCurvePainter oldDelegate) {
+    return oldDelegate.strokeColor != strokeColor ||
+        oldDelegate.fillColor != fillColor ||
+        oldDelegate.strokeWidth != strokeWidth ||
+        oldDelegate.R != R;
+  }
+}

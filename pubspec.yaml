@@ -1,0 +1,82 @@
+name: giftswale
+description: "GiftsWale — Multi-vendor gifting marketplace app"
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.12.2
+
+# ─────────────────────────────────────────────────────────────────
+# Dependencies
+#
+# 💡 React Native / Web equivalents:
+#   - dio ↔ axios (HTTP client with interceptors)
+#   - flutter_riverpod ↔ zustand (state management)
+#   - go_router ↔ react-navigation / react-router
+#   - flutter_secure_storage ↔ @react-native-async-storage
+#   - cached_network_image ↔ react-native-fast-image
+#   - carousel_slider ↔ react-native-snap-carousel
+#   - shimmer ↔ react-native-shimmer-placeholder
+# ─────────────────────────────────────────────────────────────────
+dependencies:
+  flutter:
+    sdk: flutter
+
+  cupertino_icons: ^1.0.8
+
+  # ── State Management ──
+  flutter_riverpod: ^2.6.1       # Like Zustand — reactive state management
+
+  # ── HTTP & Networking ──
+  dio: ^5.7.0                    # Like Axios — HTTP client with interceptors
+
+  # ── Routing ──
+  go_router: ^14.8.1             # Like React Navigation — declarative routing
+
+  # ── Storage ──
+  flutter_secure_storage: ^9.2.4 # Like AsyncStorage but encrypted — for tokens
+  shared_preferences: ^2.3.5     # Like AsyncStorage — for non-sensitive data
+
+  # ── Image Loading ──
+  cached_network_image: ^3.4.1   # Like FastImage — cached network images
+
+  # ── UI Components ──
+  carousel_slider: ^5.0.0        # For hero banner carousel
+  shimmer: ^3.0.0                # Skeleton loading placeholders
+  smooth_page_indicator: ^1.2.0  # Page indicator dots for carousels
+
+  # ── Utilities ──
+  intl: ^0.19.0                  # Date/number formatting & i18n
+  url_launcher: ^6.3.1           # Open URLs, phone, email
+  flutter_svg: ^2.0.16           # SVG rendering
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
+
+  # ── Assets ──
+  assets:
+    - assets/images/
+
+  # ── Fonts ──
+  # TODO: Download Outfit font files from Google Fonts and add here
+  # For now, the app will use Google Fonts package or system font fallback
+  # fonts:
+  #   - family: Outfit
+  #     fonts:
+  #       - asset: assets/fonts/Outfit-Light.ttf
+  #         weight: 300
+  #       - asset: assets/fonts/Outfit-Regular.ttf
+  #         weight: 400
+  #       - asset: assets/fonts/Outfit-Medium.ttf
+  #         weight: 500
+  #       - asset: assets/fonts/Outfit-SemiBold.ttf
+  #         weight: 600
+  #       - asset: assets/fonts/Outfit-Bold.ttf
+  #         weight: 700
+  #       - asset: assets/fonts/Outfit-ExtraBold.ttf
+  #         weight: 800
