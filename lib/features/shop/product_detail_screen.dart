@@ -382,7 +382,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
               setState(() => _activeImageIndex = index),
           itemBuilder: (context, index) => CachedImage(
             imageUrl: images[index],
-            fit: BoxFit.cover,
+            fit: BoxFit.contain,
           ),
         ),
         // Image counter

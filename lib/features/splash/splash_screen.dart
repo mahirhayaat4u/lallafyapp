@@ -140,7 +140,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    'The Magic of Gifting ✨',
+                    'The Magic of Toys',
                     style: AppTextStyles.bodySm.copyWith(
                       color: AppColors.textMuted,
                       fontStyle: FontStyle.italic,

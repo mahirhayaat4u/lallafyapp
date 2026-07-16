@@ -9,6 +9,7 @@ import '../../core/theme/app_text_styles.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/loading_widget.dart';
 import '../../core/widgets/error_widget.dart';
+import '../../core/widgets/app_drawer.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/homepage_provider.dart';
 import '../../providers/cart_provider.dart';
@@ -57,6 +58,7 @@ class HomeScreen extends ConsumerStatefulWidget {
 
 class _HomeScreenState extends ConsumerState<HomeScreen>
     with TickerProviderStateMixin {
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   // Animation controller for smooth curve movement
   late AnimationController _curveAnimController;
   late Animation<double> _curveAnimation;
@@ -162,7 +164,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     final categoriesAsync = ref.watch(categoriesProvider);
 
     return Scaffold(
+      key: _scaffoldKey,
       backgroundColor: AppColors.bg,
+      drawer: const AppDrawer(),
       body: SafeArea(
         child: RefreshIndicator(
           color: AppColors.primary,
@@ -356,7 +360,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                 IconButton(
                   icon: const Icon(Icons.menu_rounded, color: Colors.black87, size: 28),
                   onPressed: () {
-                    Scaffold.maybeOf(context)?.openDrawer();
+                    _scaffoldKey.currentState?.openDrawer();
                   },
                 ),
 

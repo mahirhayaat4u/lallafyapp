@@ -133,13 +133,25 @@ final featuredProductsProvider = FutureProvider<List<Product>>((ref) {
 });
 
 /// Flower section cards
-final flowerCardsProvider = FutureProvider<List<HomepageCard>>((ref) {
-  return ref.read(homepageRepositoryProvider).fetchFlowerCards();
+final flowerCardsProvider = FutureProvider<List<HomepageCard>>((ref) async {
+  try {
+    final cards = await ref.read(homepageRepositoryProvider).fetchFlowerCards();
+    if (cards.isEmpty) return _staticFlowerCards;
+    return cards;
+  } catch (_) {
+    return _staticFlowerCards;
+  }
 });
 
 /// Relationship section cards
-final relationshipCardsProvider = FutureProvider<List<HomepageCard>>((ref) {
-  return ref.read(homepageRepositoryProvider).fetchRelationshipCards();
+final relationshipCardsProvider = FutureProvider<List<HomepageCard>>((ref) async {
+  try {
+    final cards = await ref.read(homepageRepositoryProvider).fetchRelationshipCards();
+    if (cards.isEmpty) return _staticRelationshipCards;
+    return cards;
+  } catch (_) {
+    return _staticRelationshipCards;
+  }
 });
 
 /// Luxury section cards
@@ -305,5 +317,47 @@ const _staticComboCards = [
     title: 'Flowers N Guitarist',
     imageUrl: 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=400&auto=format&fit=crop&q=80',
     link: '/shop?category=experiences-vouchers',
+  ),
+];
+
+const _staticFlowerCards = [
+  HomepageCard(
+    id: 'fl_1',
+    title: 'Roses',
+    imageUrl: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=400&auto=format&fit=crop&q=80',
+    link: '/shop?category=flowers&search=roses',
+  ),
+  HomepageCard(
+    id: 'fl_2',
+    title: 'Lilies',
+    imageUrl: 'https://images.unsplash.com/photo-1508784411316-02b8ec448e96?w=400&auto=format&fit=crop&q=80',
+    link: '/shop?category=flowers&search=lilies',
+  ),
+  HomepageCard(
+    id: 'fl_3',
+    title: 'Carnations',
+    imageUrl: 'https://images.unsplash.com/photo-1561181286-d3fee7d55364?w=400&auto=format&fit=crop&q=80',
+    link: '/shop?category=flowers&search=carnations',
+  ),
+  HomepageCard(
+    id: 'fl_4',
+    title: 'Orchids',
+    imageUrl: 'https://images.unsplash.com/photo-1525310072745-f49212b5ac6d?w=400&auto=format&fit=crop&q=80',
+    link: '/shop?category=flowers&search=orchids',
+  ),
+];
+
+const _staticRelationshipCards = [
+  HomepageCard(
+    id: 'rel_1',
+    title: 'Him',
+    imageUrl: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=300&auto=format&fit=crop&q=80',
+    link: '/shop?relation=him',
+  ),
+  HomepageCard(
+    id: 'rel_2',
+    title: 'Her',
+    imageUrl: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=300&auto=format&fit=crop&q=80',
+    link: '/shop?relation=her',
   ),
 ];

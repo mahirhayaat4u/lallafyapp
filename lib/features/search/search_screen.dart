@@ -9,6 +9,7 @@ import '../../core/theme/app_text_styles.dart';
 import '../../core/theme/app_theme.dart';
 import '../../models/homepage_card.dart';
 import '../../models/product.dart';
+import '../../models/category.dart';
 import '../../providers/homepage_provider.dart';
 
 /// Redesigned Search Screen showing recent/trending categories, relationships, flowers,
@@ -42,14 +43,14 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   ];
 
   final List<String> _popularQueries = [
-    'Mango Cake',
-    'Roses',
-    'Personalized Mug',
-    'Photo Frame',
-    'Chocolate',
-    'Teddy Bear',
-    'Plants',
-    'Cushion'
+    'Wooden Toys',
+    'Educational Games',
+    'Plush Teddy',
+    'Musical Piano',
+    'Building Blocks',
+    'Dolls',
+    'Board Games',
+    'Puzzles'
   ];
 
   @override
@@ -112,8 +113,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final flowerCardsAsync = ref.watch(flowerCardsProvider);
-    final personalizeCardsAsync = ref.watch(personalizeCardsProvider);
+    final categoriesAsync = ref.watch(categoriesProvider);
+    final trendingProductsAsync = ref.watch(trendingProductsProvider);
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -154,7 +155,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                 ),
                 prefixIcon: const Icon(
                   Icons.search_rounded,
-                  color: Color(0xFFEF476F),
+                  color: AppColors.primary,
                   size: 22,
                 ),
                 suffixIcon: _searchController.text.isNotEmpty
@@ -179,7 +180,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
             )
           : _searchController.text.trim().isNotEmpty
               ? _buildSuggestionsList()
-              : _buildDefaultDropdownView(personalizeCardsAsync, flowerCardsAsync),
+              : _buildDefaultDropdownView(categoriesAsync, trendingProductsAsync),
     );
   }
 
@@ -225,8 +226,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
             child: ElevatedButton.icon(
               onPressed: () => _executeSearch(_searchController.text),
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFFFF0F2),
-                foregroundColor: const Color(0xFFEF476F),
+                backgroundColor: AppColors.primary.withValues(alpha: 0.08),
+                foregroundColor: AppColors.primary,
                 elevation: 0,
                 minimumSize: const Size(double.infinity, 48),
                 shape: RoundedRectangleBorder(
@@ -291,7 +292,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
               fontFamily: 'Outfit',
               fontSize: 14,
               fontWeight: FontWeight.bold,
-              color: Color(0xFFEF476F),
+              color: AppColors.primary,
             ),
           ),
           onTap: () => context.push('/product/${product.id}'),
@@ -301,8 +302,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   }
 
   Widget _buildDefaultDropdownView(
-    AsyncValue<List<HomepageCard>> personalizeAsync,
-    AsyncValue<List<HomepageCard>> flowersAsync,
+    AsyncValue<List<Category>> categoriesAsync,
+    AsyncValue<List<Product>> trendingProductsAsync,
   ) {
     return SingleChildScrollView(
       physics: const BouncingScrollPhysics(),
@@ -310,7 +311,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ── 1. Popular/Trending Queries ──
+          // ── 1. Trending Queries ──
           const Text(
             'Trending Searches',
             style: TextStyle(
@@ -353,75 +354,19 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
           
           const SizedBox(height: 32),
 
-          // ── 2. Recipients ("Shop For Everyone") ──
-          const Text(
-            'Shop For Everyone',
-            style: TextStyle(
-              fontFamily: 'Outfit',
-              fontSize: 15,
-              fontWeight: FontWeight.bold,
-              color: AppColors.text,
-            ),
-          ),
-          const SizedBox(height: 14),
-          GridView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: _defaultRelationships.length,
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 4,
-              mainAxisSpacing: 12,
-              crossAxisSpacing: 12,
-              childAspectRatio: 1.1,
-            ),
-            itemBuilder: (context, index) {
-              final rel = _defaultRelationships[index];
-              return GestureDetector(
-                onTap: () => context.push('/shop?relation=${rel['relation']}'),
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFFF0F2), // Premium soft pink
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  alignment: Alignment.center,
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        rel['relation'] == 'him' || rel['relation'] == 'boyfriend' || rel['relation'] == 'husband'
-                            ? Icons.face_rounded
-                            : Icons.face_3_rounded,
-                        color: const Color(0xFFEF476F),
-                        size: 24,
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        rel['name']!,
-                        style: const TextStyle(
-                          fontFamily: 'Outfit',
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFFBC3B5D),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            },
-          ),
-          
-          const SizedBox(height: 32),
+          // ── 2. Real Toy Categories from DB ──
+          categoriesAsync.when(
+            data: (categories) {
+              if (categories.isEmpty) return const SizedBox.shrink();
+              
+              // Filter to show top-level categories or first few categories
+              final displayCategories = categories.take(8).toList();
 
-          // ── 3. Trending Gifts (Personalize Cards) ──
-          personalizeAsync.when(
-            data: (cards) {
-              if (cards.isEmpty) return const SizedBox.shrink();
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
-                    'Trending Gifts',
+                    'Shop by Category',
                     style: TextStyle(
                       fontFamily: 'Outfit',
                       fontSize: 15,
@@ -429,60 +374,76 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                       color: AppColors.text,
                     ),
                   ),
-                  const SizedBox(height: 12),
-                  SizedBox(
-                    height: 120,
-                    child: ListView.builder(
-                      scrollDirection: Axis.horizontal,
-                      itemCount: cards.length,
-                      itemBuilder: (context, index) {
-                        final card = cards[index];
-                        return GestureDetector(
-                          onTap: () {
-                            if (card.link != null && card.link!.isNotEmpty) {
-                              context.push(card.link!);
-                            }
-                          },
-                          child: Container(
-                            width: 100,
-                            margin: const EdgeInsets.only(right: 12),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Expanded(
-                                  child: Container(
-                                    decoration: BoxDecoration(
-                                      borderRadius: BorderRadius.circular(16),
-                                      color: Colors.grey.shade100,
-                                    ),
-                                    clipBehavior: Clip.antiAlias,
-                                    child: CachedNetworkImage(
-                                      imageUrl: card.imageUrl,
-                                      fit: BoxFit.cover,
-                                      width: 100,
-                                      placeholder: (context, url) => Container(color: Colors.grey.shade100),
-                                      errorWidget: (context, url, error) => const Icon(Icons.card_giftcard_rounded, color: Colors.grey),
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(height: 6),
-                                Text(
-                                  card.title,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
-                                    fontFamily: 'Outfit',
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w600,
-                                    color: AppColors.text,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        );
-                      },
+                  const SizedBox(height: 14),
+                  GridView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: displayCategories.length,
+                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 4,
+                      mainAxisSpacing: 12,
+                      crossAxisSpacing: 12,
+                      childAspectRatio: 0.95,
                     ),
+                    itemBuilder: (context, index) {
+                      final category = displayCategories[index];
+                      return GestureDetector(
+                        onTap: () => context.push('/shop?category=${category.slug}'),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withValues(alpha: 0.05),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: AppColors.primary.withValues(alpha: 0.08)),
+                          ),
+                          padding: const EdgeInsets.all(8),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              // Category image or default fallback icon
+                              Expanded(
+                                child: Container(
+                                  width: double.infinity,
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  clipBehavior: Clip.antiAlias,
+                                  child: category.imageUrl != null && category.imageUrl!.isNotEmpty
+                                      ? CachedNetworkImage(
+                                          imageUrl: category.imageUrl!,
+                                          fit: BoxFit.cover,
+                                          placeholder: (context, url) => Container(color: Colors.grey.shade100),
+                                          errorWidget: (context, url, error) => const Icon(
+                                            Icons.widgets_rounded,
+                                            color: AppColors.primary,
+                                            size: 20,
+                                          ),
+                                        )
+                                      : const Icon(
+                                          Icons.widgets_rounded,
+                                          color: AppColors.primary,
+                                          size: 20,
+                                        ),
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                category.name,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(
+                                  fontFamily: 'Outfit',
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.primaryDark,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
                   ),
                   const SizedBox(height: 32),
                 ],
@@ -492,15 +453,15 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
             error: (_, __) => const SizedBox.shrink(),
           ),
 
-          // ── 4. Pick Their Fav Flowers (Flower Cards) ──
-          flowersAsync.when(
-            data: (cards) {
-              if (cards.isEmpty) return const SizedBox.shrink();
+          // ── 3. Real Trending Toys from DB ──
+          trendingProductsAsync.when(
+            data: (toys) {
+              if (toys.isEmpty) return const SizedBox.shrink();
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
-                    'Pick Their Fav Flowers',
+                    'Trending Toys',
                     style: TextStyle(
                       fontFamily: 'Outfit',
                       fontSize: 15,
@@ -510,20 +471,16 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                   ),
                   const SizedBox(height: 12),
                   SizedBox(
-                    height: 120,
+                    height: 140,
                     child: ListView.builder(
                       scrollDirection: Axis.horizontal,
-                      itemCount: cards.length,
+                      itemCount: toys.length,
                       itemBuilder: (context, index) {
-                        final card = cards[index];
+                        final toy = toys[index];
                         return GestureDetector(
-                          onTap: () {
-                            if (card.link != null && card.link!.isNotEmpty) {
-                              context.push(card.link!);
-                            }
-                          },
+                          onTap: () => context.push('/product/${toy.id}'),
                           child: Container(
-                            width: 100,
+                            width: 105,
                             margin: const EdgeInsets.only(right: 12),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -533,20 +490,29 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                                     decoration: BoxDecoration(
                                       borderRadius: BorderRadius.circular(16),
                                       color: Colors.grey.shade100,
+                                      border: Border.all(color: Colors.grey.shade200),
                                     ),
                                     clipBehavior: Clip.antiAlias,
-                                    child: CachedNetworkImage(
-                                      imageUrl: card.imageUrl,
-                                      fit: BoxFit.cover,
-                                      width: 100,
-                                      placeholder: (context, url) => Container(color: Colors.grey.shade100),
-                                      errorWidget: (context, url, error) => const Icon(Icons.card_giftcard_rounded, color: Colors.grey),
-                                    ),
+                                    child: toy.primaryImage.isNotEmpty
+                                        ? CachedNetworkImage(
+                                            imageUrl: toy.primaryImage,
+                                            fit: BoxFit.cover,
+                                            width: 105,
+                                            placeholder: (context, url) => Container(color: Colors.grey.shade100),
+                                            errorWidget: (context, url, error) => const Icon(
+                                              Icons.toys_rounded,
+                                              color: Colors.grey,
+                                            ),
+                                          )
+                                        : const Icon(
+                                            Icons.toys_rounded,
+                                            color: Colors.grey,
+                                          ),
                                   ),
                                 ),
                                 const SizedBox(height: 6),
                                 Text(
-                                  card.title,
+                                  toy.name,
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   style: const TextStyle(
@@ -554,6 +520,16 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                                     fontSize: 12,
                                     fontWeight: FontWeight.w600,
                                     color: AppColors.text,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  '₹${toy.price.toStringAsFixed(0)}',
+                                  style: const TextStyle(
+                                    fontFamily: 'Outfit',
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.primary,
                                   ),
                                 ),
                               ],

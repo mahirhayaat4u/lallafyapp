@@ -18,6 +18,7 @@ import '../../features/orders/order_detail_screen.dart';
 import '../../features/profile/profile_screen.dart';
 import '../../features/profile/addresses_screen.dart';
 import '../../features/search/search_screen.dart';
+import '../../features/support/support_screen.dart';
 import '../widgets/bottom_nav_shell.dart';
 import '../../providers/auth_provider.dart';
 
@@ -82,6 +83,11 @@ GoRouter createRouter(Ref ref) {
         path: '/forgot-password',
         name: 'forgot-password',
         builder: (context, state) => const ForgotPasswordScreen(),
+      ),
+      GoRoute(
+        path: '/support',
+        name: 'support',
+        builder: (context, state) => const SupportScreen(),
       ),
 
       // ─── Main App Shell (WITH bottom navigation) ─────────────
