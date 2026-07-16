@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:razorpay_flutter/razorpay_flutter.dart';
 
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
@@ -11,10 +12,11 @@ import '../../core/utils/formatters.dart';
 import '../../core/widgets/cached_image.dart';
 import '../../core/widgets/app_button.dart';
 import '../../providers/cart_provider.dart';
+import '../../providers/auth_provider.dart';
 import '../profile/addresses_screen.dart';
 
 /// Checkout stepper labels
-const _steps = ['Address', 'Gift Options', 'Payment'];
+const _steps = ['Address', 'Payment'];
 
 /// Checkout Screen — mirrors CheckoutPage.tsx
 ///
@@ -46,8 +48,22 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
   final _stateCtrl = TextEditingController();
   final _pincodeCtrl = TextEditingController();
 
+  // Razorpay instance
+  late Razorpay _razorpay;
+  Map<String, dynamic>? _pendingOrderData; // store for verify call
+
+  @override
+  void initState() {
+    super.initState();
+    _razorpay = Razorpay();
+    _razorpay.on(Razorpay.EVENT_PAYMENT_SUCCESS, _handlePaymentSuccess);
+    _razorpay.on(Razorpay.EVENT_PAYMENT_ERROR, _handlePaymentError);
+    _razorpay.on(Razorpay.EVENT_EXTERNAL_WALLET, _handleExternalWallet);
+  }
+
   @override
   void dispose() {
+    _razorpay.clear();
     _nameCtrl.dispose();
     _phoneCtrl.dispose();
     _line1Ctrl.dispose();
@@ -55,6 +71,81 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     _stateCtrl.dispose();
     _pincodeCtrl.dispose();
     super.dispose();
+  }
+
+  void _handlePaymentSuccess(PaymentSuccessResponse response) async {
+    // Verify payment with backend
+    try {
+      final verifyRes = await DioClient().post(
+        ApiConstants.paymentsVerify,
+        data: {
+          'razorpay_order_id': response.orderId,
+          'razorpay_payment_id': response.paymentId,
+          'razorpay_signature': response.signature,
+          'orderData': _pendingOrderData,
+        },
+      );
+
+      if (verifyRes.data['success'] == true) {
+        ref.read(cartProvider.notifier).clearCart();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Payment successful! Order placed 🎉'),
+              backgroundColor: AppColors.success,
+            ),
+          );
+          context.go('/orders');
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Payment received but order issue. Payment ID: ${response.paymentId}. Contact support.',
+              ),
+              backgroundColor: AppColors.warning,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Payment successful! Payment ID: ${response.paymentId}. Order will be confirmed shortly.',
+            ),
+            backgroundColor: AppColors.success,
+          ),
+        );
+        context.go('/orders');
+      }
+    } finally {
+      if (mounted) setState(() => _paying = false);
+    }
+  }
+
+  void _handlePaymentError(PaymentFailureResponse response) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Payment failed: ${response.message ?? 'Unknown error'}'),
+          backgroundColor: AppColors.danger,
+        ),
+      );
+      setState(() => _paying = false);
+    }
+  }
+
+  void _handleExternalWallet(ExternalWalletResponse response) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('External wallet: ${response.walletName}'),
+        ),
+      );
+    }
   }
 
   Future<void> _applyCoupon() async {
@@ -102,7 +193,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
         data: {
           'name': _nameCtrl.text,
           'phone': _phoneCtrl.text,
-          'line1': _line1Ctrl.text,
+          'address': _line1Ctrl.text,
           'city': _cityCtrl.text,
           'state': _stateCtrl.text,
           'pincode': _pincodeCtrl.text,
@@ -147,15 +238,47 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
 
     try {
       if (_paymentMethod == 'cod') {
-        // COD order
+        // Get the selected address details
+        final addressesAsync = ref.read(addressesProvider);
+        final addresses = addressesAsync.valueOrNull ?? [];
+        final selectedAddr = addresses.firstWhere(
+          (a) => (a['_id'] ?? a['id']) == _selectedAddressId,
+          orElse: () => null,
+        );
+
+        if (selectedAddr == null) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Address not found')),
+            );
+          }
+          return;
+        }
+
+        // Build items for backend createOrder
+        final cart = ref.read(cartProvider);
+        final orderItems = cart.items.map((i) => {
+          'product': i.productId,
+          'name': i.name,
+          'price': i.effectivePrice,
+          'quantity': i.quantity,
+          'image': i.imageUrl ?? '',
+        }).toList();
+
+        // COD order using standard POST /orders
         await DioClient().post(
-          ApiConstants.ordersCod,
+          ApiConstants.orders,
           data: {
-            'addressId': _selectedAddressId,
-            'giftWrap': _giftWrap,
-            if (_giftMessage.isNotEmpty) 'giftMessage': _giftMessage,
-            if (_couponCode.isNotEmpty) 'couponCode': _couponCode,
-            'cartItems': cartItems,
+            'items': orderItems,
+            'shippingAddress': {
+              'fullName': selectedAddr['name'] ?? '',
+              'phone': selectedAddr['phone'] ?? '',
+              'addressLine': selectedAddr['address'] ?? selectedAddr['line1'] ?? '',
+              'city': selectedAddr['city'] ?? '',
+              'state': selectedAddr['state'] ?? '',
+              'pincode': selectedAddr['pincode'] ?? '',
+            },
+            'paymentMethod': 'cod',
           },
         );
         ref.read(cartProvider.notifier).clearCart();
@@ -169,53 +292,87 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
           context.go('/orders');
         }
       } else {
-        // Online payment — sync cart first
-        await DioClient().post(ApiConstants.cartSync, data: {'items': cartItems});
+        // Online payment — Razorpay integration
+        // Get selected address details
+        final addressesAsync = ref.read(addressesProvider);
+        final addresses = addressesAsync.valueOrNull ?? [];
+        final selectedAddr = addresses.firstWhere(
+          (a) => (a['_id'] ?? a['id']) == _selectedAddressId,
+          orElse: () => null,
+        );
 
-        // Create Cashfree order
-        final orderData = await DioClient().post(
+        final cart = ref.read(cartProvider);
+        final total = cart.items.fold<double>(
+          0, (sum, i) => sum + i.effectivePrice * i.quantity,
+        );
+
+        // Build items matching website format
+        final itemsForBackend = cart.items.map((i) => {
+          '_id': i.productId,
+          'name': i.name,
+          'price': i.effectivePrice,
+          'quantity': i.quantity,
+          'images': [i.imageUrl ?? ''],
+        }).toList();
+
+        final shippingDetails = {
+          'name': selectedAddr?['name'] ?? '',
+          'phone': selectedAddr?['phone'] ?? '',
+          'address': selectedAddr?['address'] ?? selectedAddr?['line1'] ?? '',
+          'city': selectedAddr?['city'] ?? '',
+          'state': selectedAddr?['state'] ?? '',
+          'pincode': selectedAddr?['pincode'] ?? '',
+        };
+
+        // Get user ID from auth
+        final authState = ref.read(authProvider);
+        final userId = authState.user?.userId;
+
+        // Step 1: Create Razorpay order via backend
+        final orderRes = await DioClient().post(
           ApiConstants.paymentsCreate,
           data: {
-            'addressId': _selectedAddressId,
-            'giftWrap': _giftWrap,
-            if (_giftMessage.isNotEmpty) 'giftMessage': _giftMessage,
+            'amount': total,
+            'items': itemsForBackend,
+            'shippingDetails': shippingDetails,
+            'userId': userId,
           },
         );
 
-        final cfOrderId = orderData.data['cfOrderId'];
-        final mode = orderData.data['mode'];
+        final razorpayOrderId = orderRes.data['id'];
+        final razorpayAmount = orderRes.data['amount'];
 
-        if (mode == 'mock') {
-          // Mock mode — verify directly
-          await DioClient().post(
-            ApiConstants.paymentsVerify,
-            data: {
-              'addressId': _selectedAddressId,
-              'giftWrap': _giftWrap,
-              'cfOrderId': cfOrderId,
-            },
-          );
-          ref.read(cartProvider.notifier).clearCart();
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Order placed successfully! 🎉'),
-                backgroundColor: AppColors.success,
-              ),
-            );
-            context.go('/orders');
-          }
-        } else {
-          // Live mode — Cashfree Flutter SDK integration
-          // TODO: Integrate cashfree_pg Flutter SDK for live payments
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Online payments coming soon. Use COD for now.'),
-              ),
-            );
-          }
-        }
+        // Store order data for verify callback
+        _pendingOrderData = {
+          'items': itemsForBackend,
+          'totalAmount': total,
+          'shippingDetails': shippingDetails,
+          'userId': userId,
+        };
+
+        final razorpayKey = orderRes.data['keyId'] ?? 'rzp_test_TDJpb2HvvvomV0';
+        final parsedAmount = (double.tryParse(razorpayAmount.toString()) ?? 0).round();
+
+        // Step 2: Open Razorpay Checkout
+        final options = {
+          'key': razorpayKey,
+          'amount': parsedAmount,
+          'currency': 'INR',
+          'order_id': razorpayOrderId,
+          'name': 'Lallafy',
+          'description': 'Order Payment',
+          'prefill': {
+            'name': selectedAddr?['name'] ?? '',
+            'contact': selectedAddr?['phone'] ?? '',
+          },
+          'theme': {
+            'color': '#3E6B48',
+          },
+        };
+
+        _razorpay.open(options);
+        // Payment result handled by _handlePaymentSuccess / _handlePaymentError callbacks
+        return; // Don't set _paying = false here, callbacks handle it
       }
     } catch (e) {
       if (mounted) {
@@ -234,8 +391,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
   @override
   Widget build(BuildContext context) {
     final cart = ref.watch(cartProvider);
-    final giftWrapFee = _giftWrap ? 50.0 : 0.0;
-    final total = cart.subtotal + cart.shipping + giftWrapFee - _couponDiscount;
+    final total = cart.total;
 
     return Scaffold(
       backgroundColor: AppColors.bg,
@@ -258,8 +414,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
               padding: const EdgeInsets.all(20),
               children: [
                 if (_step == 0) _buildAddressStep(),
-                if (_step == 1) _buildGiftStep(),
-                if (_step == 2) _buildPaymentStep(total),
+                if (_step == 1) _buildPaymentStep(total),
               ],
             ),
           ),
@@ -378,7 +533,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
         SizedBox(
           width: double.infinity,
           child: AppButton(
-            label: 'Continue to Gift Options →',
+            label: 'Continue to Payment →',
             onPressed: _selectedAddressId != null
                 ? () => setState(() => _step = 1)
                 : null,
@@ -390,9 +545,10 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
   }
 
   Widget _addressCard(dynamic a) {
-    final isSelected = _selectedAddressId == a['id'];
+    final addressId = a['_id'] ?? a['id'];
+    final isSelected = _selectedAddressId == addressId;
     return GestureDetector(
-      onTap: () => setState(() => _selectedAddressId = a['id']),
+      onTap: () => setState(() => _selectedAddressId = addressId),
       child: Container(
         margin: const EdgeInsets.only(bottom: 10),
         padding: const EdgeInsets.all(16),
@@ -425,7 +581,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    '${a['line1']}, ${a['city']}, ${a['state']} ${a['pincode']}',
+                    '${a['address'] ?? a['line1'] ?? ''}, ${a['city'] ?? ''}, ${a['state'] ?? ''} ${a['pincode'] ?? ''}',
                     style: AppTextStyles.bodyXs
                         .copyWith(color: AppColors.textMuted),
                   ),
@@ -764,7 +920,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
         Row(
           children: [
             OutlinedButton(
-              onPressed: () => setState(() => _step = 1),
+              onPressed: () => setState(() => _step = 0),
               style: OutlinedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(
                     horizontal: 20, vertical: 14),

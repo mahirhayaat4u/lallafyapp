@@ -13,8 +13,8 @@ import '../../core/widgets/cached_image.dart';
 
 /// Order detail provider
 final orderDetailProvider =
-    FutureProvider.family<Map<String, dynamic>, String>((ref, orderNumber) async {
-  final response = await DioClient().get(ApiConstants.orderDetail(orderNumber));
+    FutureProvider.family<Map<String, dynamic>, String>((ref, orderId) async {
+  final response = await DioClient().get(ApiConstants.orderDetail(orderId));
   final data = response.data;
   return (data['order'] ?? data['data']?['order'] ?? data['data'] ?? data)
       as Map<String, dynamic>;
@@ -22,13 +22,13 @@ final orderDetailProvider =
 
 /// Order Detail Screen — mirrors OrderDetailPage.tsx
 class OrderDetailScreen extends ConsumerWidget {
-  final String orderNumber;
+  final String orderId;
 
-  const OrderDetailScreen({super.key, required this.orderNumber});
+  const OrderDetailScreen({super.key, required this.orderId});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final orderAsync = ref.watch(orderDetailProvider(orderNumber));
+    final orderAsync = ref.watch(orderDetailProvider(orderId));
 
     return Scaffold(
       backgroundColor: AppColors.bg,
@@ -43,7 +43,11 @@ class OrderDetailScreen extends ConsumerWidget {
           },
           icon: const Icon(Icons.arrow_back_ios_rounded, size: 20),
         ),
-        title: Text('Order #$orderNumber'),
+        title: orderAsync.when(
+          data: (order) => Text('Order #${order['orderNumber'] ?? ''}'),
+          loading: () => const Text('Loading...'),
+          error: (_, __) => const Text('Order Details'),
+        ),
       ),
       body: orderAsync.when(
         data: (order) => _OrderDetailBody(order: order),
@@ -91,7 +95,7 @@ class _OrderDetailBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final status = (order['status'] ?? 'pending') as String;
+    final status = (order['orderStatus'] ?? order['status'] ?? 'pending') as String;
     final isCancelled = status == 'cancelled';
 
     return ListView(
@@ -127,7 +131,7 @@ class _OrderDetailBody extends StatelessWidget {
         const SizedBox(height: 16),
 
         // ── Delivery Address ──
-        if (order['address'] != null) _buildAddressCard(),
+        if (order['shippingAddress'] != null || order['address'] != null) _buildAddressCard(),
         const SizedBox(height: 32),
       ],
     );
@@ -135,6 +139,9 @@ class _OrderDetailBody extends StatelessWidget {
 
   // ── Header Card ──
   Widget _buildHeaderCard(BuildContext context, String status) {
+    final paymentRaw = order['payment'];
+    final paymentStatus = order['paymentStatus'] ??
+        (paymentRaw is Map ? paymentRaw['status'] : null);
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -170,10 +177,10 @@ class _OrderDetailBody extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           // Payment status
-          if (order['payment'] != null) ...[
+          if (paymentStatus != null) ...[
             Row(
               children: [
-                _paymentBadge(order['payment']),
+                _paymentBadge(paymentStatus),
                 if (order['paymentMethod'] == 'cod') ...[
                   const SizedBox(width: 8),
                   Container(
@@ -427,9 +434,10 @@ class _OrderDetailBody extends StatelessWidget {
     if (storeOrders != null && storeOrders.isNotEmpty) {
       return Column(
         children: storeOrders.map<Widget>((so) {
-          final storeName = so['store']?['storeName'] ?? 'Store';
-          final storeStatus = so['status'] ?? '';
-          final items = (so['orderItems'] ?? []) as List<dynamic>;
+          final storeField = so['store'];
+          final storeName = (storeField is Map) ? (storeField['storeName'] ?? 'Store') : 'Store';
+          final storeStatus = (so['status'] ?? '').toString();
+          final items = (so['items'] ?? so['orderItems'] ?? []) as List<dynamic>;
           final trackingNumber = so['trackingNumber'];
 
           return Container(
@@ -490,7 +498,7 @@ class _OrderDetailBody extends StatelessWidget {
     }
 
     // Fallback: orderItems directly on the order
-    final items = (order['orderItems'] ?? []) as List<dynamic>;
+    final items = (order['items'] ?? order['orderItems'] ?? []) as List<dynamic>;
     if (items.isEmpty) {
       return const SizedBox.shrink();
     }
@@ -528,11 +536,18 @@ class _OrderDetailBody extends StatelessWidget {
   }
 
   Widget _buildItemRow(dynamic item, BuildContext context) {
-    final imageUrl = item['product']?['images']?[0]?['url'];
-    final name = item['productName'] ?? item['product']?['name'] ?? 'Item';
+    final product = item['product'];
+    final productMap = (product is Map) ? product : null;
+    final images = productMap?['images'];
+    // Product.images is [String] (plain URLs), not [{url}] objects
+    final imageUrl = item['image'] ??
+        ((images is List && images.isNotEmpty)
+            ? (images[0] is String ? images[0] : (images[0] is Map ? images[0]['url'] : null))
+            : null);
+    final name = item['name'] ?? item['productName'] ?? productMap?['name'] ?? 'Item';
     final qty = item['quantity'] ?? 1;
     final price = double.tryParse('${item['price']}') ?? 0;
-    final slug = item['product']?['slug'];
+    final slug = productMap?['slug'];
 
     return InkWell(
       onTap: slug != null ? () => context.push('/product/$slug') : null,
@@ -597,11 +612,11 @@ class _OrderDetailBody extends StatelessWidget {
 
   // ── Price Breakdown ──
   Widget _buildPriceBreakdown() {
-    final subtotal = double.tryParse('${order['subtotal']}') ?? 0;
-    final shipping = double.tryParse('${order['shippingFee']}') ?? 0;
-    final giftWrapFee = double.tryParse('${order['giftWrapFee']}') ?? 0;
-    final discount = double.tryParse('${order['discount']}') ?? 0;
-    final total = double.tryParse('${order['total']}') ?? 0;
+    final subtotal = double.tryParse('${order['itemsTotal'] ?? order['subtotal'] ?? 0}') ?? 0;
+    final shipping = double.tryParse('${order['shippingCharge'] ?? order['shippingFee'] ?? 0}') ?? 0;
+    final giftWrapFee = double.tryParse('${order['giftWrapFee'] ?? 0}') ?? 0;
+    final discount = double.tryParse('${order['discount'] ?? 0}') ?? 0;
+    final total = double.tryParse('${order['totalAmount'] ?? order['total'] ?? 0}') ?? 0;
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -681,7 +696,8 @@ class _OrderDetailBody extends StatelessWidget {
 
   // ── Delivery Address ──
   Widget _buildAddressCard() {
-    final address = order['address'];
+    final address = order['shippingAddress'] ?? order['address'];
+    if (address == null) return const SizedBox.shrink();
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -698,12 +714,12 @@ class _OrderDetailBody extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           Text(
-            address['name'] ?? '',
+            address['fullName'] ?? address['name'] ?? '',
             style: AppTextStyles.bodySm.copyWith(fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: 4),
           Text(
-            address['line1'] ?? '',
+            address['addressLine'] ?? address['line1'] ?? '',
             style: AppTextStyles.bodyXs.copyWith(color: AppColors.textMuted),
           ),
           Text(
@@ -761,19 +777,22 @@ class _OrderDetailBody extends StatelessWidget {
   }
 
   Widget _paymentBadge(dynamic payment) {
-    final payStatus = payment['status'] ?? '';
-    final isCaptured = payStatus == 'captured';
+    // payment can be a String like "paid" or a Map like {status: "captured"}
+    final payStatus = (payment is String)
+        ? payment
+        : (payment is Map ? (payment['status'] ?? '') : '');
+    final isPaid = payStatus == 'paid' || payStatus == 'captured';
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: (isCaptured ? AppColors.success : AppColors.warning)
+        color: (isPaid ? AppColors.success : AppColors.warning)
             .withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(AppTheme.radiusFull),
       ),
       child: Text(
-        isCaptured ? '✓ Payment Received' : '⏳ Payment Pending',
+        isPaid ? '✓ Paid' : '⏳ Payment Pending',
         style: AppTextStyles.bodyXs.copyWith(
-          color: isCaptured ? AppColors.success : AppColors.warning,
+          color: isPaid ? AppColors.success : AppColors.warning,
           fontWeight: FontWeight.w600,
         ),
       ),

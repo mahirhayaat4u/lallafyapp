@@ -29,19 +29,23 @@ class Banner {
   });
 
   factory Banner.fromJson(Map<String, dynamic> json) {
+    final mediaUrl = (json['media'] ?? json['imageUrl'] ?? json['image'] ?? '').toString();
+    final hasTitle = (json['title'] as String?)?.isNotEmpty == true;
+    final hasLabel = (json['label'] as String?)?.isNotEmpty == true;
+
     return Banner(
-      id: (json['id'] ?? json['_id'] ?? '').toString(),
+      id: (json['_id'] ?? json['id'] ?? '').toString(),
       label: json['label'] as String?,
       title: json['title'] as String?,
       subtitle: json['subtitle'] as String?,
       buttonText: json['buttonText'] as String?,
-      imageUrl: json['imageUrl'] as String? ?? json['image'] as String? ?? '',
+      imageUrl: mediaUrl,
       bgColor: json['bgColor'] as String? ?? '#f2ece4',
       buttonColor: json['buttonColor'] as String?,
       textColor: json['textColor'] as String?,
       btnTextColor: json['btnTextColor'] as String?,
       link: json['link'] as String?,
-      isImageOnly: json['isImageOnly'] as bool? ?? false,
+      isImageOnly: json['isImageOnly'] as bool? ?? (!hasTitle && !hasLabel),
     );
   }
 }

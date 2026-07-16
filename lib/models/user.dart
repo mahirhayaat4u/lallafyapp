@@ -1,15 +1,14 @@
 /// User model — mirrors the user object returned from the backend
 ///
-/// 💡 React Native equivalent: This is like defining a TypeScript interface,
-/// but in Dart we create a class with fromJson/toJson methods.
-/// The web version uses a simple `interface User` in authStore.ts;
-/// in Flutter/Dart we need explicit serialization.
+/// Maps to Mongoose User schema: { _id, name, email, role, phone, avatar, isActive }
 class User {
   final String userId;
   final String name;
   final String email;
   final String role;
   final String? phone;
+  final String? avatar;
+  final bool isActive;
 
   const User({
     required this.userId,
@@ -17,17 +16,21 @@ class User {
     required this.email,
     required this.role,
     this.phone,
+    this.avatar,
+    this.isActive = true,
   });
 
   /// Create User from JSON response
-  /// Backend returns: { userId, name, email, role, phone }
+  /// Backend returns: { _id, name, email, role, phone, avatar, isActive }
   factory User.fromJson(Map<String, dynamic> json) {
     return User(
-      userId: json['userId'] as String? ?? json['id'] as String,
-      name: json['name'] as String,
-      email: json['email'] as String,
-      role: json['role'] as String,
-      phone: json['phone'] as String?,
+      userId: (json['userId'] ?? json['_id'] ?? json['id'] ?? '').toString(),
+      name: json['name'] as String? ?? 'User',
+      email: json['email'] as String? ?? '',
+      role: json['role'] as String? ?? 'customer',
+      phone: (json['phone'] as String?)?.isNotEmpty == true ? json['phone'] as String : null,
+      avatar: (json['avatar'] as String?)?.isNotEmpty == true ? json['avatar'] as String : null,
+      isActive: json['isActive'] as bool? ?? true,
     );
   }
 
@@ -39,6 +42,8 @@ class User {
       'email': email,
       'role': role,
       'phone': phone,
+      'avatar': avatar,
+      'isActive': isActive,
     };
   }
 
@@ -48,6 +53,8 @@ class User {
     String? email,
     String? phone,
     String? role,
+    String? avatar,
+    bool? isActive,
   }) {
     return User(
       userId: userId,
@@ -55,12 +62,15 @@ class User {
       email: email ?? this.email,
       role: role ?? this.role,
       phone: phone ?? this.phone,
+      avatar: avatar ?? this.avatar,
+      isActive: isActive ?? this.isActive,
     );
   }
 
   bool get isAdmin => role == 'admin';
   bool get isVendor => role == 'vendor';
   bool get isCustomer => role == 'customer';
+  bool get hasAvatar => avatar != null && avatar!.isNotEmpty;
 
   @override
   String toString() => 'User($name, $email, $role)';

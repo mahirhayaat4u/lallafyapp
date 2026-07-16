@@ -14,12 +14,22 @@ import '../../providers/homepage_provider.dart';
 import '../../providers/cart_provider.dart';
 import '../../models/category.dart';
 import '../../models/homepage_card.dart';
+import '../../models/age_group.dart';
 
 import 'widgets/banner_carousel.dart';
 import 'widgets/category_circles.dart';
 import 'widgets/homepage_section.dart';
 import 'widgets/product_card.dart';
 import 'widgets/birthday_special_section.dart';
+import 'widgets/best_seller_section.dart';
+import 'widgets/magic_of_gifting_section.dart';
+import 'widgets/my_first_year_section.dart';
+import 'widgets/trending_toys_section.dart';
+import 'widgets/skill_development_section.dart';
+import 'widgets/customer_review_section.dart';
+import 'widgets/why_trust_lallafy_section.dart';
+import 'widgets/faq_section.dart';
+import 'widgets/musical_toys_section.dart';
 import 'widgets/occasion_tabs_section.dart';
 import 'widgets/gifting_stories_section.dart';
 import 'widgets/relationship_section.dart';
@@ -181,83 +191,136 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 12),
 
-                    // ── 1. Subcategories (children of selected parent) ──
-                    _SubcategoriesSection(selectedIndex: selectedIndex),
+                    // ── 1. Hero banner carousel (Top) ──
+                    _BannersSection(),
 
-              const SizedBox(height: 20),
+                    const SizedBox(height: 16),
 
-              // ── 2. Hero banner carousel ──
-              _BannersSection(),
+                    // ── 2. Shop by Category (Dynamic Age Groups from backend) ──
+                    const _ShopByCategorySection(),
 
-              const SizedBox(height: 32),
+                    const SizedBox(height: 24),
 
-              // ── 3. Birthday Special ──
+                    // ── 3. Shop by Price ──
+                    const _ShopByPriceSection(),
+
+                    const SizedBox(height: 24),
+
+              // ── 4. Shop by Category (Root categories from DB) ──
               const BirthdaySpecialSection(),
 
-              const SizedBox(height: 32),
+              const SizedBox(height: 24),
 
-              // ── 4. Featured / Trending Products ──
+              // ── 5. Best Sellers Section (from BestSellerCarousal.jsx) ──
+              const BestSellerSection(),
+
+              const SizedBox(height: 24),
+
+              // ── 6. Magic of Gifting Section (from MagicOfGifting.jsx / Admin SectionBanner) ──
+              const MagicOfGiftingSection(),
+
+              const SizedBox(height: 24),
+
+              // ── 7. My First Toy Section (from Myfirstyear.jsx / Admin SectionBanner / ageGroup=0–1 Years) ──
+              const MyFirstYearSection(),
+
+              const SizedBox(height: 24),
+
+              // ── 8. Trending Toys Section (from TrendingToys.jsx / Admin SectionBanner / section=trending) ──
+              const TrendingToysSection(),
+
+              const SizedBox(height: 24),
+
+              // ── 9. Skill Development Section (from SkillDevelopment.jsx / Admin SectionBanner / section=skill) ──
+              const SkillDevelopmentSection(),
+
+              const SizedBox(height: 24),
+
+              // ── 10. Musical Toys Section (from MusicalToys.jsx / Admin SectionBanner / section=musical) ──
+              const MusicalToysSection(),
+
+              const SizedBox(height: 24),
+
+              // ── 11. Customer Reviews Section (from CustomerReview.jsx / GET /api/reviews/homepage) ──
+              const CustomerReviewSection(),
+
+              const SizedBox(height: 24),
+
+              // ── 12. Why Trust Lallafy? Section (from Home.jsx) ──
+              const WhyTrustLallafySection(),
+
+              const SizedBox(height: 24),
+
+              // ── 13. FAQ Section (from FAQ.jsx / FaqSection) ──
+              const FaqSection(),
+
+              const SizedBox(height: 24),
+
+              // ── 6. Featured / Trending Products ──
               _FeaturedProductsSection(),
 
               const SizedBox(height: 32),
 
-              // ── 5. Flower Cards ──
-              _HomepageCardsSection(
-                provider: flowerCardsProvider,
-                label: 'Fresh Blooms',
-                title: 'Beautiful Flower Arrangements',
-                subtitle: 'Hand-picked flowers for every occasion',
-              ),
+                    // ── Old components commented out (to be updated according to Lallafy) ──
+                    /*
+                    // ── 5. Flower Cards ──
+                    _HomepageCardsSection(
+                      provider: flowerCardsProvider,
+                      label: 'Fresh Blooms',
+                      title: 'Beautiful Flower Arrangements',
+                      subtitle: 'Hand-picked flowers for every occasion',
+                    ),
 
-              const SizedBox(height: 32),
+                    const SizedBox(height: 32),
 
-              // ── 6. Occasion Tabs ──
-              const OccasionTabsSection(),
+                    // ── 6. Occasion Tabs ──
+                    const OccasionTabsSection(),
 
-              const SizedBox(height: 32),
+                    const SizedBox(height: 32),
 
-              // ── 7. Gifting Stories ──
-              const GiftingStoriesSection(),
+                    // ── 7. Gifting Stories ──
+                    const GiftingStoriesSection(),
 
-              const SizedBox(height: 32),
+                    const SizedBox(height: 32),
 
-              // ── 8. Relationship Cards ──
-              const RelationshipSection(),
+                    // ── 8. Relationship Cards ──
+                    const RelationshipSection(),
 
-              const SizedBox(height: 32),
+                    const SizedBox(height: 32),
 
-              // ── 9. Luxury Cards ──
-              _HomepageCardsSection(
-                provider: luxuryCardsProvider,
-                label: 'Premium Collection',
-                title: 'Explore Luxury Gifts',
-                subtitle: 'Curated premium selections',
-                cardHeight: 220,
-              ),
+                    // ── 9. Luxury Cards ──
+                    _HomepageCardsSection(
+                      provider: luxuryCardsProvider,
+                      label: 'Premium Collection',
+                      title: 'Explore Luxury Gifts',
+                      subtitle: 'Curated premium selections',
+                      cardHeight: 220,
+                    ),
 
-              const SizedBox(height: 32),
+                    const SizedBox(height: 32),
 
-              // ── 10. Personalize Cards ──
-              _HomepageCardsSection(
-                provider: personalizeCardsProvider,
-                label: 'Make It Special',
-                title: 'Personalized Gifts',
-                subtitle: 'Add a personal touch',
-              ),
+                    // ── 10. Personalize Cards ──
+                    _HomepageCardsSection(
+                      provider: personalizeCardsProvider,
+                      label: 'Make It Special',
+                      title: 'Personalized Gifts',
+                      subtitle: 'Add a personal touch',
+                    ),
 
-              const SizedBox(height: 32),
+                    const SizedBox(height: 32),
 
-              // ── 11. Combo Cards ──
-              _HomepageCardsSection(
-                provider: comboCardsProvider,
-                label: 'Gift Together',
-                title: 'Combo Gift Sets',
-                subtitle: 'More value, more joy',
-              ),
+                    // ── 11. Combo Cards ──
+                    _HomepageCardsSection(
+                      provider: comboCardsProvider,
+                      label: 'Gift Together',
+                      title: 'Combo Gift Sets',
+                      subtitle: 'More value, more joy',
+                    ),
+                    */
 
-              const SizedBox(height: 40),
+                    const SizedBox(height: 30),
 
               // ── Footer ──
               _buildFooter(context),
@@ -276,104 +339,80 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
   Widget _buildHeader(BuildContext context, WidgetRef ref, dynamic authState, int cartItems, AsyncValue<List<Category>> categoriesAsync, int selectedIndex) {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 8),
+      padding: const EdgeInsets.symmetric(vertical: 4),
       decoration: const BoxDecoration(
         color: Colors.white,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // --- Row 1: Logo & Actions (Padded horizontally) ---
+          // --- Row 1: Hamburger Menu (Left) | Centered Logo | Wishlist & Cart (Right) ---
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
+            padding: const EdgeInsets.symmetric(horizontal: 8),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                // Logo
+                // Hamburger Menu Icon
+                IconButton(
+                  icon: const Icon(Icons.menu_rounded, color: Colors.black87, size: 28),
+                  onPressed: () {
+                    Scaffold.maybeOf(context)?.openDrawer();
+                  },
+                ),
+
+                // Centered Logo
                 Image.asset(
-                  'assets/images/giftswale.jpg',
-                  height: 42,
+                  'assets/images/lallafy.png',
+                  height: 46,
                   fit: BoxFit.contain,
                   errorBuilder: (context, error, stackTrace) {
                     return Text(
-                      'GiftsWale',
+                      'Lallafy',
                       style: AppTextStyles.h2.copyWith(
-                        color: AppColors.primary,
+                        color: const Color(0xFFE91E63),
                         fontWeight: FontWeight.bold,
                       ),
                     );
                   },
                 ),
+
+                // Right Actions: Wishlist & Cart
                 Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    // Notification
-                    Stack(
-                      children: [
-                        IconButton(
-                          icon: const Icon(Icons.notifications_none_rounded, color: AppColors.text, size: 26),
-                          onPressed: () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('No new notifications')),
-                            );
-                          },
-                        ),
-                        Positioned(
-                          right: 8,
-                          top: 8,
-                          child: Container(
-                            padding: const EdgeInsets.all(2),
-                            decoration: BoxDecoration(
-                              color: AppColors.danger,
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            constraints: const BoxConstraints(
-                              minWidth: 12,
-                              minHeight: 12,
-                            ),
-                            child: const Text(
-                              '2',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 8,
-                                fontWeight: FontWeight.bold,
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    // Wishlist
+                    // Wishlist Icon
                     IconButton(
-                      icon: const Icon(Icons.favorite_border_rounded, color: AppColors.text, size: 26),
+                      icon: const Icon(Icons.favorite_border_rounded, color: Colors.black87, size: 25),
                       onPressed: () => context.push('/wishlist'),
                     ),
-                    // Cart
+
+                    // Cart Icon with Pink Badge
                     Stack(
+                      alignment: Alignment.center,
                       children: [
                         IconButton(
-                          icon: const Icon(Icons.shopping_bag_outlined, color: AppColors.text, size: 26),
+                          icon: const Icon(Icons.shopping_cart_outlined, color: Colors.black87, size: 25),
                           onPressed: () => context.go('/cart'),
                         ),
                         if (cartItems > 0)
                           Positioned(
-                            right: 6,
-                            top: 6,
+                            right: 4,
+                            top: 4,
                             child: Container(
                               padding: const EdgeInsets.all(3),
                               decoration: const BoxDecoration(
-                                color: AppColors.primary,
+                                color: Color(0xFFE91E63),
                                 shape: BoxShape.circle,
                               ),
                               constraints: const BoxConstraints(
-                                minWidth: 16,
-                                minHeight: 16,
+                                minWidth: 17,
+                                minHeight: 17,
                               ),
                               child: Text(
                                 '$cartItems',
                                 style: const TextStyle(
                                   color: Colors.white,
-                                  fontSize: 9,
+                                  fontSize: 10,
                                   fontWeight: FontWeight.bold,
                                 ),
                                 textAlign: TextAlign.center,
@@ -382,84 +421,62 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                           ),
                       ],
                     ),
-                    // Profile
-                    IconButton(
-                      icon: const Icon(Icons.person_outline_rounded, color: AppColors.text, size: 26),
-                      onPressed: () => context.push('/profile'),
-                    ),
                   ],
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
 
-          // --- Row 2: Search Bar (Padded horizontally) ---
+          // --- Row 2: Search Bar with Pink Rounded Right Button ---
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: GestureDetector(
               onTap: () => context.push('/search'),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                height: 48,
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.circular(30),
-                  border: Border.all(color: Colors.black.withValues(alpha: 0.05), width: 1),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.06),
-                      blurRadius: 12,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(color: const Color(0xFFE2E8F0), width: 1.2),
                 ),
                 child: Row(
                   children: [
-                    const Icon(
-                      Icons.search_rounded,
-                      color: Color(0xFFEF476F),
-                      size: 26,
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Text(
+                        'Search for toys, gifts & more...',
+                        style: TextStyle(
+                          color: Colors.grey.shade500,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w400,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
-                    const SizedBox(width: 14),
-                    const Expanded(
-                      child: _AnimatedSearchHint(),
-                    ),
-                    const Icon(
-                      Icons.mic_none_rounded,
-                      color: Color(0xFF5E5E6A),
-                      size: 24,
-                    ),
-                    const SizedBox(width: 14),
-                    const Icon(
-                      Icons.camera_alt_outlined,
-                      color: Color(0xFF5E5E6A),
-                      size: 24,
+                    // Pink Search Button
+                    Container(
+                      height: 48,
+                      width: 52,
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFE91E63),
+                        borderRadius: BorderRadius.only(
+                          topRight: Radius.circular(23),
+                          bottomRight: Radius.circular(23),
+                        ),
+                      ),
+                      child: const Icon(
+                        Icons.search_rounded,
+                        color: Colors.white,
+                        size: 24,
+                      ),
                     ),
                   ],
                 ),
               ),
             ),
           ),
-          const SizedBox(height: 12),
-
-          // --- Row 3: Dynamic Category Tabs with Animated Curve ---
-          categoriesAsync.when(
-            data: (categories) {
-              if (categories.isEmpty) return const SizedBox(height: 38);
-              return _buildAnimatedTabBar(context, categories, selectedIndex);
-            },
-            loading: () => const SizedBox(
-              height: 38,
-              child: Center(
-                child: SizedBox(
-                  width: 16,
-                  height: 16,
-                  child: CircularProgressIndicator(strokeWidth: 1.5, color: AppColors.primary),
-                ),
-              ),
-            ),
-            error: (_, _) => const SizedBox(height: 38),
-          ),
+          const SizedBox(height: 6),
         ],
       ),
     );
@@ -816,7 +833,7 @@ class _FeaturedProductsSection extends ConsumerWidget {
                 itemBuilder: (context, index) => ProductCard(
                   product: products[index],
                   onTap: () {
-                    context.push('/product/${products[index].slug}');
+                    context.push('/product/${products[index].id}');
                   },
                 ),
               ),
@@ -1041,3 +1058,261 @@ class TabCurvePainter extends CustomPainter {
         oldDelegate.R != R;
   }
 }
+
+// ─── Shop by Category Section (Dynamic Age Groups from backend) ────────────
+class _ShopByCategorySection extends ConsumerWidget {
+  const _ShopByCategorySection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final ageGroupsAsync = ref.watch(ageGroupsProvider);
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Shop by Category',
+                style: AppTextStyles.h2.copyWith(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18,
+                  color: Colors.black87,
+                ),
+              ),
+              GestureDetector(
+                onTap: () => context.go('/categories'),
+                child: Row(
+                  children: [
+                    Text(
+                      'View All',
+                      style: AppTextStyles.caption.copyWith(
+                        color: const Color(0xFFE91E63),
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
+                      ),
+                    ),
+                    const SizedBox(width: 2),
+                    const Icon(
+                      Icons.arrow_forward_rounded,
+                      color: Color(0xFFE91E63),
+                      size: 14,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          ageGroupsAsync.when(
+            data: (ageGroups) => _buildAgeGrid(context, ageGroups),
+            loading: () => const SizedBox(
+              height: 110,
+              child: Center(child: CircularProgressIndicator(color: Color(0xFFE91E63), strokeWidth: 2)),
+            ),
+            error: (_, __) => const SizedBox.shrink(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAgeGrid(BuildContext context, List<AgeGroup> ageGroups) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: ageGroups.take(4).map((item) {
+        final bg = _parseColor(item.bgColor, fallback: const Color(0xFFF3F4F6));
+        final border = _parseColor(item.borderColor, fallback: const Color(0xFF9CA3AF));
+        final textCol = _parseColor(item.textColor, fallback: const Color(0xFF1F2937));
+
+        return Expanded(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 3),
+            child: GestureDetector(
+              onTap: () => context.push('/shop?ageGroup=${Uri.encodeComponent(item.label)}'),
+              child: SizedBox(
+                height: 96,
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  alignment: Alignment.topCenter,
+                  children: [
+                    // Card Container (positioned lower so top avatar floats over top border)
+                    Positioned.fill(
+                      top: 22,
+                      child: Container(
+                        padding: const EdgeInsets.only(top: 36, bottom: 8, left: 2, right: 2),
+                        decoration: BoxDecoration(
+                          color: bg,
+                          borderRadius: BorderRadius.circular(18),
+                          border: Border.all(color: border, width: 1.5),
+                        ),
+                        child: Text(
+                          item.label,
+                          style: TextStyle(
+                            color: textCol,
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          textAlign: TextAlign.center,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ),
+                    // Floating Avatar Circle (Overflows top edge of box)
+                    Positioned(
+                      top: 0,
+                      child: Container(
+                        width: 52,
+                        height: 52,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.06),
+                              blurRadius: 8,
+                              offset: const Offset(0, 3),
+                            ),
+                          ],
+                        ),
+                        child: Center(
+                          child: item.image != null && item.image!.isNotEmpty
+                              ? ClipOval(
+                                  child: Image.network(
+                                    item.image!,
+                                    width: 48,
+                                    height: 48,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (_, __, ___) => Text(item.emoji, style: const TextStyle(fontSize: 24)),
+                                  ),
+                                )
+                              : Text(item.emoji, style: const TextStyle(fontSize: 24)),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  Color _parseColor(String hexString, {required Color fallback}) {
+    try {
+      final buffer = StringBuffer();
+      if (hexString.length == 6 || hexString.length == 7) buffer.write('ff');
+      buffer.write(hexString.replaceFirst('#', ''));
+      return Color(int.parse(buffer.toString(), radix: 16));
+    } catch (_) {
+      return fallback;
+    }
+  }
+}
+
+// ─── Shop by Price Section ──────────────────────────────────────────────────
+class _ShopByPriceSection extends StatelessWidget {
+  const _ShopByPriceSection();
+
+  static const _priceItems = [
+    (label: '₹0-₹250', min: 0, max: 250, icon: Icons.savings_outlined, border: Color(0xFF2D6A4F), bg: Color(0xFFD4EDDA), text: Color(0xFF2D6A4F)),
+    (label: '₹250-₹500', min: 250, max: 500, icon: Icons.bolt_rounded, border: Color(0xFFC2185B), bg: Color(0xFFFFE0E6), text: Color(0xFFC2185B)),
+    (label: '₹500-₹1000', min: 500, max: 1000, icon: Icons.card_giftcard_rounded, border: Color(0xFF1565C0), bg: Color(0xFFD6EAFF), text: Color(0xFF1565C0)),
+    (label: '₹1000+', min: 1000, max: 999999, icon: Icons.diamond_outlined, border: Color(0xFF7B1FA2), bg: Color(0xFFF3E5F5), text: Color(0xFF7B1FA2)),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Shop by Price',
+            style: AppTextStyles.h2.copyWith(
+              fontWeight: FontWeight.bold,
+              fontSize: 18,
+              color: Colors.black87,
+            ),
+          ),
+          const SizedBox(height: 14),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: _priceItems.map((item) {
+              return Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 3),
+                  child: GestureDetector(
+                    onTap: () => context.push('/shop?minPrice=${item.min}&maxPrice=${item.max}'),
+                    child: SizedBox(
+                      height: 96,
+                      child: Stack(
+                        clipBehavior: Clip.none,
+                        alignment: Alignment.topCenter,
+                        children: [
+                          // Card Container (positioned lower so top avatar floats over top border)
+                          Positioned.fill(
+                            top: 22,
+                            child: Container(
+                              padding: const EdgeInsets.only(top: 36, bottom: 8, left: 2, right: 2),
+                              decoration: BoxDecoration(
+                                color: item.bg,
+                                borderRadius: BorderRadius.circular(18),
+                                border: Border.all(color: item.border, width: 1.5),
+                              ),
+                              child: Text(
+                                item.label,
+                                style: TextStyle(
+                                  color: item.text,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                          ),
+                          // Floating Icon Circle (Overflows top edge of box)
+                          Positioned(
+                            top: 0,
+                            child: Container(
+                              width: 52,
+                              height: 52,
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                shape: BoxShape.circle,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.06),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 3),
+                                  ),
+                                ],
+                              ),
+                              child: Icon(
+                                item.icon,
+                                color: item.text,
+                                size: 24,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+        ],
+      ),
+    );
+  }
+}
+

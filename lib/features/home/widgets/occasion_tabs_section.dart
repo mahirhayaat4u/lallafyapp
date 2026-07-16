@@ -211,7 +211,7 @@ class _OccasionProductsCarousel extends ConsumerWidget {
             itemBuilder: (context, index) => ProductCard(
               product: products[index],
               onTap: () {
-                context.push('/product/${products[index].slug}');
+                context.push('/product/${products[index].id}');
               },
             ),
           ),

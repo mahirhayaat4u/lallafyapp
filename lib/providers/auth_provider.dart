@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -92,42 +93,53 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
   /// Login with email and password
   ///
-  /// 💡 Mirrors: useAuthStore().login(email, password)
+  /// Login with email and password
   Future<void> login(String email, String password) async {
     state = state.copyWith(isLoading: true, clearError: true);
     try {
       final result = await _repo.login(email: email, password: password);
 
-      // Save tokens securely
+      // Save token
       await _client.saveTokens(
-        accessToken: result.accessToken,
-        refreshToken: result.refreshToken,
+        accessToken: result.token,
+        refreshToken: result.token,
       );
 
       // Save user locally
       await _saveUserLocally(result.user);
 
       state = state.copyWith(user: result.user, isLoading: false);
+
+      // Fetch full user profile from server in background (phone, addresses, etc.)
+      try {
+        final freshUser = await _repo.fetchMe();
+        state = state.copyWith(user: freshUser);
+        await _saveUserLocally(freshUser);
+      } catch (_) {}
     } on ApiException catch (e) {
       state = state.copyWith(isLoading: false, error: e.message);
       rethrow;
+    } on DioException catch (e) {
+      final data = e.response?.data;
+      final msg = (data is Map)
+          ? (data['message'] ?? data['error'] ?? 'Login failed. Please check credentials.')
+          : 'Login failed. Please check credentials.';
+      state = state.copyWith(isLoading: false, error: msg.toString());
+      throw ApiException(message: msg.toString(), statusCode: e.response?.statusCode);
     } catch (e) {
       state = state.copyWith(
         isLoading: false,
         error: 'Login failed. Please try again.',
       );
-      rethrow;
+      throw ApiException(message: 'Login failed. Please try again.');
     }
   }
 
   /// Register a new customer account
-  ///
-  /// 💡 Mirrors: useAuthStore().register(name, email, password, phone)
   Future<void> register({
     required String name,
     required String email,
     required String password,
-    required String phone,
   }) async {
     state = state.copyWith(isLoading: true, clearError: true);
     try {
@@ -135,12 +147,11 @@ class AuthNotifier extends StateNotifier<AuthState> {
         name: name,
         email: email,
         password: password,
-        phone: phone,
       );
 
       await _client.saveTokens(
-        accessToken: result.accessToken,
-        refreshToken: result.refreshToken,
+        accessToken: result.token,
+        refreshToken: result.token,
       );
       await _saveUserLocally(result.user);
 
@@ -148,12 +159,19 @@ class AuthNotifier extends StateNotifier<AuthState> {
     } on ApiException catch (e) {
       state = state.copyWith(isLoading: false, error: e.message);
       rethrow;
+    } on DioException catch (e) {
+      final data = e.response?.data;
+      final msg = (data is Map)
+          ? (data['message'] ?? data['error'] ?? 'User already exists or registration failed.')
+          : 'Registration failed. Check details.';
+      state = state.copyWith(isLoading: false, error: msg.toString());
+      throw ApiException(message: msg.toString(), statusCode: e.response?.statusCode);
     } catch (e) {
       state = state.copyWith(
         isLoading: false,
         error: 'Registration failed. Please try again.',
       );
-      rethrow;
+      throw ApiException(message: 'Registration failed. Please try again.');
     }
   }
 

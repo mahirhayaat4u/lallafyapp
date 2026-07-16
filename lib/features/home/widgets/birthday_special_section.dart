@@ -1,106 +1,170 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
-import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/cached_image.dart';
+import '../../../models/category.dart';
+import '../../../providers/homepage_provider.dart';
 
-/// Birthday Special Section — mirrors BirthdaySpecialSection.tsx
-///
-/// Layout: Left banner card + horizontally scrollable category items
-class BirthdaySpecialSection extends StatelessWidget {
+/// Shop By Category Section — mirrors ShopByCategory.jsx from lallafy.com
+/// strictly rendering actual categories fetched directly from Mongoose DB.
+class BirthdaySpecialSection extends ConsumerWidget {
   const BirthdaySpecialSection({super.key});
 
-  static const List<Map<String, String>> _birthdayItems = [
-    {
-      'name': 'Flowers',
-      'slug': 'flowers',
-      'image':
-          'https://images.unsplash.com/photo-1526047932273-341f2a7631f9?w=350&fit=crop&q=80',
-    },
-    {
-      'name': 'Cakes',
-      'slug': 'cakes',
-      'image':
-          'https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=350&fit=crop&q=80',
-    },
-    {
-      'name': 'Personalised',
-      'slug': 'personalised',
-      'image':
-          'https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?w=350&fit=crop&q=80',
-    },
-    {
-      'name': 'Plants',
-      'slug': 'plants',
-      'image':
-          'https://images.unsplash.com/photo-1485955900006-10f4d324d411?w=350&fit=crop&q=80',
-    },
-    {
-      'name': 'Gift Sets',
-      'slug': 'gift-sets',
-      'image':
-          'https://images.unsplash.com/photo-1549417229-aa67d3263c09?w=350&fit=crop&q=80',
-    },
-    {
-      'name': 'Hampers',
-      'slug': 'gift-hampers',
-      'image':
-          'https://images.unsplash.com/photo-1607344645866-009c320c5ab8?w=350&fit=crop&q=80',
-    },
-    {
-      'name': 'Balloon Decor',
-      'slug': 'balloon-decor',
-      'image':
-          'https://images.unsplash.com/photo-1530103862676-de8c9debad1d?w=350&fit=crop&q=80',
-    },
-    {
-      'name': 'Bestsellers',
-      'slug': 'all',
-      'image':
-          'https://images.unsplash.com/photo-1548907040-4d42b52125bf?w=350&fit=crop&q=80',
-    },
-  ];
-
   @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: AppTheme.pagePadding),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // ── Left Banner Card ──
-          _buildBannerCard(context),
-          const SizedBox(height: 20),
-          // ── Category Items Grid (horizontal scroll) ──
-          _buildCategoryCarousel(context),
-        ],
-      ),
+  Widget build(BuildContext context, WidgetRef ref) {
+    final categoriesAsync = ref.watch(categoriesProvider);
+
+    return categoriesAsync.when(
+      data: (categories) {
+        if (categories.isEmpty) return const SizedBox.shrink();
+
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // ── Header Row ──
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      RichText(
+                        text: TextSpan(
+                          style: AppTextStyles.h2.copyWith(
+                            fontSize: 22,
+                            fontWeight: FontWeight.w900,
+                            color: const Color(0xFF1A1C23),
+                            letterSpacing: -0.5,
+                          ),
+                          children: const [
+                            TextSpan(text: 'Shop by '),
+                            TextSpan(
+                              text: 'Category',
+                              style: TextStyle(color: Color(0xFFFF448C)),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        'Find the perfect match for every interest.',
+                        style: TextStyle(
+                          fontFamily: 'Outfit',
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.grey.shade600,
+                        ),
+                      ),
+                    ],
+                  ),
+                  GestureDetector(
+                    onTap: () => context.push('/categories'),
+                    child: Padding(
+                      padding: const EdgeInsets.only(bottom: 2),
+                      child: Row(
+                        children: const [
+                          Text(
+                            'View All',
+                            style: TextStyle(
+                              fontFamily: 'Outfit',
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                              color: Color(0xFFFF448C),
+                            ),
+                          ),
+                          SizedBox(width: 2),
+                          Icon(
+                            Icons.chevron_right_rounded,
+                            color: Color(0xFFFF448C),
+                            size: 20,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+
+              // ── Actual DB Categories Carousel ──
+              SizedBox(
+                height: 200,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  clipBehavior: Clip.none,
+                  itemCount: categories.length,
+                  separatorBuilder: (_, __) => const SizedBox(width: 14),
+                  itemBuilder: (context, index) {
+                    final cat = categories[index];
+                    return _buildCategoryCard(context, cat);
+                  },
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+      loading: () => const SizedBox.shrink(),
+      error: (_, __) => const SizedBox.shrink(),
     );
   }
 
-  Widget _buildBannerCard(BuildContext context) {
+  Widget _buildCategoryCard(BuildContext context, Category cat) {
+    final hasImage = cat.imageUrl != null && cat.imageUrl!.isNotEmpty;
+
     return GestureDetector(
-      onTap: () => context.push('/shop?occasion=birthday'),
+      onTap: () => context.push('/shop?category=${cat.id}'),
       child: Container(
+        width: 145,
         height: 200,
-        width: double.infinity,
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(AppTheme.radiusXl),
-          boxShadow: AppColors.shadowMd,
+          color: Colors.grey.shade100,
+          borderRadius: BorderRadius.circular(22),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.08),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
         clipBehavior: Clip.antiAlias,
         child: Stack(
           fit: StackFit.expand,
           children: [
-            // Background image
-            const CachedImage(
-              imageUrl:
-                  'https://images.unsplash.com/photo-1513201099705-a9746e1e201f?w=600&auto=format&fit=crop&q=80',
-              fit: BoxFit.cover,
-            ),
-            // Gradient overlay
+            // Category Image from DB
+            if (hasImage)
+              CachedImage(
+                imageUrl: cat.imageUrl!,
+                fit: BoxFit.cover,
+              )
+            else
+              Container(
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [Color(0xFFFF80AB), Color(0xFFFF448C)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                ),
+                child: Center(
+                  child: Text(
+                    cat.name.isNotEmpty ? cat.name[0].toUpperCase() : 'C',
+                    style: const TextStyle(
+                      fontSize: 42,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+
+            // Gradient Overlay for readability
             Container(
               decoration: const BoxDecoration(
                 gradient: LinearGradient(
@@ -108,128 +172,57 @@ class BirthdaySpecialSection extends StatelessWidget {
                   end: Alignment.bottomCenter,
                   colors: [
                     Colors.transparent,
-                    Color(0x73000000),
-                    Color(0xF2C2185B),
+                    Color(0x20000000),
+                    Color(0xCC000000),
                   ],
                   stops: [0.0, 0.45, 1.0],
                 ),
               ),
             ),
-            // Content
+
+            // Content at Bottom
             Positioned(
-              bottom: 20,
-              left: 20,
-              right: 70,
+              bottom: 14,
+              left: 14,
+              right: 14,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    'Birthdays Made Special',
-                    style: AppTextStyles.h2.copyWith(
-                      color: Colors.white,
+                    cat.name,
+                    style: const TextStyle(
+                      fontFamily: 'Outfit',
+                      fontSize: 15,
                       fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Joyful surprises and curated boxes to make their special day unforgettable.',
-                    style: AppTextStyles.bodyXs.copyWith(
-                      color: Colors.white.withValues(alpha: 0.9),
-                      fontWeight: FontWeight.w500,
+                      color: Colors.white,
+                      height: 1.2,
                     ),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: const [
+                      Text(
+                        'Explore Now',
+                        style: TextStyle(
+                          fontFamily: 'Outfit',
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFFFF448C),
+                        ),
+                      ),
+                      SizedBox(width: 2),
+                      Icon(
+                        Icons.chevron_right_rounded,
+                        color: Color(0xFFFF448C),
+                        size: 15,
+                      ),
+                    ],
+                  ),
                 ],
               ),
-            ),
-            // Arrow button
-            Positioned(
-              bottom: 20,
-              right: 20,
-              child: Container(
-                width: 44,
-                height: 44,
-                decoration: const BoxDecoration(
-                  color: Color(0xFFD83545),
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Color(0x40D83545),
-                      blurRadius: 12,
-                      offset: Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: const Icon(
-                  Icons.arrow_forward_rounded,
-                  color: Colors.white,
-                  size: 22,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildCategoryCarousel(BuildContext context) {
-    return SizedBox(
-      height: 125,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        itemCount: _birthdayItems.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 14),
-        itemBuilder: (context, index) {
-          final item = _birthdayItems[index];
-          return _buildCategoryItem(context, item);
-        },
-      ),
-    );
-  }
-
-  Widget _buildCategoryItem(BuildContext context, Map<String, String> item) {
-    return GestureDetector(
-      onTap: () {
-        if (item['slug'] == 'all') {
-          context.push('/shop?sort=popular');
-        } else {
-          context.push('/shop?category=${item['slug']}');
-        }
-      },
-      child: SizedBox(
-        width: 82,
-        child: Column(
-          children: [
-            // Borderless Squircle Image Container
-            Container(
-              width: 80,
-              height: 80,
-              decoration: BoxDecoration(
-                color: const Color(0xFFFAFAFA),
-                borderRadius: BorderRadius.circular(28),
-              ),
-              clipBehavior: Clip.antiAlias,
-              child: CachedImage(
-                imageUrl: item['image'],
-                fit: BoxFit.cover,
-              ),
-            ),
-            const SizedBox(height: 8),
-            // Label (Not Bold, regular font)
-            Text(
-              item['name']!,
-              style: const TextStyle(
-                fontFamily: 'Outfit',
-                fontSize: 12,
-                fontWeight: FontWeight.w400,
-                color: Color(0xFF334155),
-              ),
-              textAlign: TextAlign.center,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
             ),
           ],
         ),

@@ -76,7 +76,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
         ),
       );
 
-      context.go('/');
+      context.go('/home');
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -160,37 +160,42 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                       children: [
                         const SizedBox(height: 10),
                         
-                        // Logo with soft border and rounded corners
+                        // Lallafy Logo with soft glow
                         Container(
-                          height: 80,
-                          width: 140,
+                          height: 75,
+                          width: 170,
                           decoration: BoxDecoration(
                             color: Colors.white,
-                            borderRadius: BorderRadius.circular(16),
+                            borderRadius: BorderRadius.circular(20),
                             border: Border.all(color: const Color(0xFFFFD1DC), width: 1.5),
                             boxShadow: [
                               BoxShadow(
-                                color: const Color(0xFFBC3B5D).withOpacity(0.04),
-                                blurRadius: 10,
+                                color: const Color(0xFFFF448C).withOpacity(0.08),
+                                blurRadius: 16,
                                 offset: const Offset(0, 4),
                               ),
                             ],
                           ),
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                           child: Image.asset(
-                            'assets/images/giftswale.jpg',
+                            'assets/images/lallafy.png',
                             fit: BoxFit.contain,
-                            errorBuilder: (context, error, stackTrace) => const Icon(
-                              Icons.card_giftcard_rounded,
-                              size: 32,
-                              color: Color(0xFFEF476F),
+                            errorBuilder: (context, error, stackTrace) => const Text(
+                              'Lallafy',
+                              style: TextStyle(
+                                fontFamily: 'Outfit',
+                                fontSize: 26,
+                                fontWeight: FontWeight.w900,
+                                color: Color(0xFFFF448C),
+                              ),
+                              textAlign: TextAlign.center,
                             ),
                           ),
                         ),
                         
-                        const SizedBox(height: 24),
+                        const SizedBox(height: 20),
                         
-                        // Welcome text with heart
+                        // Welcome text with spark
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
@@ -198,32 +203,28 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                               'Welcome Back',
                               style: TextStyle(
                                 fontFamily: 'Outfit',
-                                fontSize: 30,
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFFBC3B5D),
+                                fontSize: 28,
+                                fontWeight: FontWeight.w800,
+                                color: Color(0xFF111827),
                               ),
                             ),
-                            const SizedBox(width: 8),
-                            Transform.rotate(
-                              angle: 0.1,
-                              child: const Icon(
-                                Icons.favorite_border_rounded,
-                                color: Color(0xFFEF476F),
-                                size: 28,
-                              ),
+                            const SizedBox(width: 6),
+                            const Text(
+                              '✨',
+                              style: TextStyle(fontSize: 22),
                             ),
                           ],
                         ),
                         
-                        const SizedBox(height: 8),
+                        const SizedBox(height: 6),
                         
                         const Text(
-                          'Sign in to continue shopping\nthe perfect gifts',
+                          'Sign in to explore toys, gifts &\nmagical learning creations',
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             fontFamily: 'Outfit',
-                            fontSize: 14,
-                            color: Color(0xFF5E5E6A),
+                            fontSize: 13,
+                            color: Color(0xFF6B7280),
                             height: 1.4,
                           ),
                         ),
@@ -515,7 +516,7 @@ class _CustomFormInput extends StatelessWidget {
           obscureText: obscureText,
           validator: validator,
           textInputAction: textInputAction,
-          cursorColor: const Color(0xFFEF476F),
+          cursorColor: const Color(0xFFFF448C),
           style: const TextStyle(
             fontFamily: 'Outfit',
             fontSize: 15,
@@ -536,12 +537,12 @@ class _CustomFormInput extends StatelessWidget {
                 width: 40,
                 height: 40,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFFFF0F2),
+                  color: const Color(0xFFFFF0F5),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(
                   prefixIcon,
-                  color: const Color(0xFFEF476F),
+                  color: const Color(0xFFFF448C),
                   size: 20,
                 ),
               ),
@@ -557,7 +558,7 @@ class _CustomFormInput extends StatelessWidget {
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(14),
-              borderSide: const BorderSide(color: Color(0xFFEF476F), width: 1.5),
+              borderSide: const BorderSide(color: Color(0xFFFF448C), width: 1.5),
             ),
             errorBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(14),
@@ -594,13 +595,13 @@ class _CustomButton extends StatelessWidget {
         borderRadius: BorderRadius.circular(26),
         gradient: const LinearGradient(
           colors: [
-            Color(0xFFBC3B5D),
-            Color(0xFFC13B5E),
+            Color(0xFFFF448C),
+            Color(0xFFFF5284),
           ],
         ),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFFBC3B5D).withOpacity(0.3),
+            color: const Color(0xFFFF448C).withOpacity(0.3),
             blurRadius: 12,
             offset: const Offset(0, 6),
           ),

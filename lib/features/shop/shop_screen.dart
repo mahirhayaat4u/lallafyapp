@@ -16,53 +16,72 @@ import '../home/widgets/product_card.dart';
 /// Shop filters state
 class ShopFilters {
   final String? category;
+  final String? subCategory;
+  final String? ageGroup;
   final String? search;
   final String? tag;
   final String? occasion;
   final String? relation;
   final String? ids;
   final String? title;
+  final double? minPrice;
+  final double? maxPrice;
   final String sort;
   final int page;
 
   const ShopFilters({
     this.category,
+    this.subCategory,
+    this.ageGroup,
     this.search,
     this.tag,
     this.occasion,
     this.relation,
     this.ids,
     this.title,
+    this.minPrice,
+    this.maxPrice,
     this.sort = 'newest',
     this.page = 1,
   });
 
   ShopFilters copyWith({
     String? category,
+    String? subCategory,
+    String? ageGroup,
     String? search,
     String? tag,
     String? occasion,
     String? relation,
     String? ids,
     String? title,
+    double? minPrice,
+    double? maxPrice,
     String? sort,
     int? page,
     bool clearCategory = false,
+    bool clearSubCategory = false,
+    bool clearAgeGroup = false,
     bool clearSearch = false,
     bool clearTag = false,
     bool clearOccasion = false,
     bool clearRelation = false,
     bool clearIds = false,
     bool clearTitle = false,
+    bool clearPrice = false,
   }) {
     return ShopFilters(
       category: clearCategory ? null : (category ?? this.category),
+      subCategory: clearSubCategory ? null : (subCategory ?? this.subCategory),
+      ageGroup: clearAgeGroup ? null : (ageGroup ?? this.ageGroup),
       search: clearSearch ? null : (search ?? this.search),
       tag: clearTag ? null : (tag ?? this.tag),
       occasion: clearOccasion ? null : (occasion ?? this.occasion),
       relation: clearRelation ? null : (relation ?? this.relation),
       ids: clearIds ? null : (ids ?? this.ids),
       title: clearTitle ? null : (title ?? this.title),
+      minPrice: clearPrice ? null : (minPrice ?? this.minPrice),
+      maxPrice: clearPrice ? null : (maxPrice ?? this.maxPrice),
       sort: sort ?? this.sort,
       page: page ?? this.page,
     );
@@ -91,11 +110,15 @@ final shopProductsProvider = FutureProvider<List<Product>>((ref) {
   if (sortValue == 'popular') sortValue = 'popularity';
   return repo.fetchProducts(
     category: filters.category,
+    subCategory: filters.subCategory,
+    ageGroup: filters.ageGroup,
     search: filters.search,
     tag: filters.tag,
     occasion: filters.occasion,
     relation: filters.relation,
     ids: filters.ids,
+    minPrice: filters.minPrice,
+    maxPrice: filters.maxPrice,
     page: filters.page,
     sort: sortValue,
   );
@@ -104,6 +127,8 @@ final shopProductsProvider = FutureProvider<List<Product>>((ref) {
 /// Shop Screen — mirrors ShopPage.tsx
 class ShopScreen extends ConsumerStatefulWidget {
   final String? initialCategory;
+  final String? initialSubCategory;
+  final String? initialAgeGroup;
   final String? initialSearch;
   final String? initialTag;
   final String? initialOccasion;
@@ -111,10 +136,14 @@ class ShopScreen extends ConsumerStatefulWidget {
   final String? initialSort;
   final String? initialIds;
   final String? initialTitle;
+  final double? initialMinPrice;
+  final double? initialMaxPrice;
 
   const ShopScreen({
     super.key,
     this.initialCategory,
+    this.initialSubCategory,
+    this.initialAgeGroup,
     this.initialSearch,
     this.initialTag,
     this.initialOccasion,
@@ -122,6 +151,8 @@ class ShopScreen extends ConsumerStatefulWidget {
     this.initialSort,
     this.initialIds,
     this.initialTitle,
+    this.initialMinPrice,
+    this.initialMaxPrice,
   });
 
   @override
@@ -135,21 +166,29 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
     // Apply initial filters from route parameters
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (widget.initialCategory != null ||
+          widget.initialSubCategory != null ||
+          widget.initialAgeGroup != null ||
           widget.initialSearch != null ||
           widget.initialTag != null ||
           widget.initialOccasion != null ||
           widget.initialRelation != null ||
           widget.initialSort != null ||
           widget.initialIds != null ||
-          widget.initialTitle != null) {
+          widget.initialTitle != null ||
+          widget.initialMinPrice != null ||
+          widget.initialMaxPrice != null) {
         ref.read(shopFiltersProvider.notifier).state = ShopFilters(
           category: widget.initialCategory,
+          subCategory: widget.initialSubCategory,
+          ageGroup: widget.initialAgeGroup,
           search: widget.initialSearch,
           tag: widget.initialTag,
           occasion: widget.initialOccasion,
           relation: widget.initialRelation,
           ids: widget.initialIds,
           title: widget.initialTitle,
+          minPrice: widget.initialMinPrice,
+          maxPrice: widget.initialMaxPrice,
           sort: widget.initialSort ?? 'newest',
         );
       }
@@ -160,21 +199,29 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
   void didUpdateWidget(ShopScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.initialCategory != oldWidget.initialCategory ||
+        widget.initialSubCategory != oldWidget.initialSubCategory ||
+        widget.initialAgeGroup != oldWidget.initialAgeGroup ||
         widget.initialSearch != oldWidget.initialSearch ||
         widget.initialTag != oldWidget.initialTag ||
         widget.initialOccasion != oldWidget.initialOccasion ||
         widget.initialRelation != oldWidget.initialRelation ||
         widget.initialSort != oldWidget.initialSort ||
         widget.initialIds != oldWidget.initialIds ||
-        widget.initialTitle != oldWidget.initialTitle) {
+        widget.initialTitle != oldWidget.initialTitle ||
+        widget.initialMinPrice != oldWidget.initialMinPrice ||
+        widget.initialMaxPrice != oldWidget.initialMaxPrice) {
       ref.read(shopFiltersProvider.notifier).state = ShopFilters(
         category: widget.initialCategory,
+        subCategory: widget.initialSubCategory,
+        ageGroup: widget.initialAgeGroup,
         search: widget.initialSearch,
         tag: widget.initialTag,
         occasion: widget.initialOccasion,
         relation: widget.initialRelation,
         ids: widget.initialIds,
         title: widget.initialTitle,
+        minPrice: widget.initialMinPrice,
+        maxPrice: widget.initialMaxPrice,
         sort: widget.initialSort ?? 'newest',
       );
     }
@@ -183,6 +230,9 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
   String _getShopTitle(ShopFilters filters, List<Category> categories) {
     if (filters.title != null && filters.title!.isNotEmpty) {
       return filters.title!;
+    }
+    if (filters.ageGroup != null && filters.ageGroup!.isNotEmpty) {
+      return filters.ageGroup!;
     }
     if (filters.category != null) {
       final name = _getCategoryLabel(filters.category, categories);
@@ -589,7 +639,7 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
             if (context.canPop()) {
               context.pop();
             } else {
-              context.go('/');
+              context.go('/home');
             }
           },
           icon: const Icon(Icons.arrow_back_ios_rounded, size: 20),
@@ -763,7 +813,7 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
                   gridDelegate:
                       const SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: 2,
-                    childAspectRatio: 0.58,
+                    childAspectRatio: 0.66,
                     crossAxisSpacing: 12,
                     mainAxisSpacing: 12,
                   ),
@@ -772,7 +822,7 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
                     product: products[index],
                     width: double.infinity,
                     onTap: () {
-                      context.push('/product/${products[index].slug}');
+                      context.push('/product/${products[index].id}');
                     },
                   ),
                 );

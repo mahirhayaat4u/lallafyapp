@@ -81,6 +81,8 @@ class AppTextStyles {
     color: AppColors.text,
   );
 
+  static const TextStyle caption = bodySm;
+
   static const TextStyle bodyXs = TextStyle(
     fontFamily: _fontFamily,
     fontSize: 10.5, // font-size-xs

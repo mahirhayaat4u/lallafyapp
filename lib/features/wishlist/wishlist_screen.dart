@@ -71,7 +71,7 @@ class WishlistScreen extends ConsumerWidget {
                     product: products[index],
                     width: double.infinity,
                     onTap: () {
-                      context.push('/product/${products[index].slug}');
+                      context.push('/product/${products[index].id}');
                     },
                   ),
                 ),

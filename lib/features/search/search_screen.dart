@@ -294,7 +294,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
               color: Color(0xFFEF476F),
             ),
           ),
-          onTap: () => context.push('/product/${product.slug}'),
+          onTap: () => context.push('/product/${product.id}'),
         );
       },
     );

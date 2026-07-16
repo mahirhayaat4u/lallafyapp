@@ -6,6 +6,9 @@ import '../models/product.dart';
 import '../models/homepage_card.dart';
 import '../models/occasion_tab.dart';
 import '../models/gifting_story.dart';
+import '../models/age_group.dart';
+import '../models/section_banner.dart';
+import '../models/review.dart';
 import '../repositories/homepage_repository.dart';
 
 /// Homepage Riverpod Providers
@@ -21,10 +24,41 @@ final homepageRepositoryProvider = Provider<HomepageRepository>((ref) {
   return HomepageRepository();
 });
 
-/// Banners for hero carousel
-final bannersProvider = FutureProvider<List<Banner>>((ref) {
-  return ref.read(homepageRepositoryProvider).fetchBanners();
+/// Reviews for a specific product
+final productReviewsProvider =
+    FutureProvider.family<List<Review>, String>((ref, productId) {
+  return ref.read(homepageRepositoryProvider).fetchProductReviews(productId);
 });
+
+/// Banners for hero carousel
+final bannersProvider = FutureProvider<List<Banner>>((ref) async {
+  try {
+    final list = await ref.read(homepageRepositoryProvider).fetchBanners();
+    if (list.isNotEmpty) return list;
+    return _staticBanners;
+  } catch (_) {
+    return _staticBanners;
+  }
+});
+
+const _staticBanners = [
+  Banner(
+    id: 'b1',
+    title: 'Celebrate Every Moment',
+    subtitle: 'Thoughtful gifts for every occasion.',
+    buttonText: 'Shop Now',
+    imageUrl: 'https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=800&auto=format&fit=crop&q=80',
+    isImageOnly: true,
+  ),
+  Banner(
+    id: 'b2',
+    title: 'Special Toy Deals',
+    subtitle: 'Up to 40% off on trending toys.',
+    buttonText: 'Explore',
+    imageUrl: 'https://images.unsplash.com/photo-1566576912321-d58ddd7a6088?w=800&auto=format&fit=crop&q=80',
+    isImageOnly: true,
+  ),
+];
 
 /// Category list for circle quicklinks
 final categoriesProvider = FutureProvider<List<Category>>((ref) {
@@ -33,6 +67,64 @@ final categoriesProvider = FutureProvider<List<Category>>((ref) {
 
 /// Currently selected category tab index (for the animated tab bar)
 final selectedCategoryIndexProvider = StateProvider<int>((ref) => 0);
+
+/// Dynamic Age Groups for "Shop by Category"
+final ageGroupsProvider = FutureProvider<List<AgeGroup>>((ref) async {
+  try {
+    final list = await ref.read(homepageRepositoryProvider).fetchAgeGroups();
+    if (list.isNotEmpty) return list;
+    return _defaultAgeGroups;
+  } catch (_) {
+    return _defaultAgeGroups;
+  }
+});
+
+/// Best Seller Products
+final bestSellersProvider = FutureProvider<List<Product>>((ref) {
+  return ref.read(homepageRepositoryProvider).fetchBestSellers();
+});
+
+/// Section Banners (configured by Admin for gifting, trending, etc.)
+final sectionBannersProvider = FutureProvider<List<SectionBanner>>((ref) {
+  return ref.read(homepageRepositoryProvider).fetchSectionBanners();
+});
+
+/// Gifting Products for "Unwrap the Magic of Gifting" section
+final giftingProductsProvider = FutureProvider<List<Product>>((ref) {
+  return ref.read(homepageRepositoryProvider).fetchGiftingProducts();
+});
+
+/// My First Year Products (0–1 Years)
+final myFirstYearProductsProvider = FutureProvider<List<Product>>((ref) {
+  return ref.read(homepageRepositoryProvider).fetchMyFirstYearProducts();
+});
+
+/// Trending Products for "Trending Toys" section
+final trendingProductsProvider = FutureProvider<List<Product>>((ref) {
+  return ref.read(homepageRepositoryProvider).fetchTrendingProducts();
+});
+
+/// Skill Development Products for "Skill Development" section
+final skillProductsProvider = FutureProvider<List<Product>>((ref) {
+  return ref.read(homepageRepositoryProvider).fetchSkillProducts();
+});
+
+/// Musical Products for "Musical Toys" section
+final musicalProductsProvider = FutureProvider<List<Product>>((ref) {
+  return ref.read(homepageRepositoryProvider).fetchMusicalProducts();
+});
+
+/// Homepage Customer Reviews Section
+final homepageReviewsProvider = FutureProvider<List<Review>>((ref) {
+  return ref.read(homepageRepositoryProvider).fetchHomepageReviews();
+});
+
+const _defaultAgeGroups = [
+  AgeGroup(id: '1', label: '0–1 Years', emoji: '👶', bgColor: '#D4EDDA', borderColor: '#2D6A4F', textColor: '#2D6A4F', order: 0),
+  AgeGroup(id: '2', label: '1–3 Years', emoji: '🧒', bgColor: '#FFE0E6', borderColor: '#C2185B', textColor: '#C2185B', order: 1),
+  AgeGroup(id: '3', label: '4–12 Years', emoji: '🧸', bgColor: '#D6EAFF', borderColor: '#1565C0', textColor: '#1565C0', order: 2),
+  AgeGroup(id: '4', label: '13+ Years', emoji: '🧑', bgColor: '#F3E5F5', borderColor: '#7B1FA2', textColor: '#7B1FA2', order: 3),
+];
 
 
 /// Featured/trending products

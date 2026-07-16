@@ -68,6 +68,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           'phone': _phoneCtrl.text.trim(),
         },
       );
+      // Refresh user data from server
+      await ref.read(authProvider.notifier).fetchMe();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -76,7 +78,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           ),
         );
         setState(() => _isEditing = false);
-        ref.invalidate(authProvider);
       }
     } catch (e) {
       if (mounted) {
@@ -189,7 +190,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             child: OutlinedButton.icon(
               onPressed: () {
                 ref.read(authProvider.notifier).logout();
-                context.go('/');
+                context.go('/home');
               },
               icon: const Icon(Icons.logout_rounded,
                   size: 18, color: AppColors.danger),
@@ -237,20 +238,30 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 height: 64,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  gradient: LinearGradient(
-                    colors: [AppColors.primary, AppColors.primary.withValues(alpha: 0.7)],
-                  ),
+                  gradient: (user?.hasAvatar ?? false)
+                      ? null
+                      : LinearGradient(
+                          colors: [AppColors.primary, AppColors.primary.withValues(alpha: 0.7)],
+                        ),
+                  image: (user?.hasAvatar ?? false)
+                      ? DecorationImage(
+                          image: NetworkImage(user!.avatar!),
+                          fit: BoxFit.cover,
+                        )
+                      : null,
                 ),
-                child: Center(
-                  child: Text(
-                    (user?.name ?? 'U')[0].toUpperCase(),
-                    style: const TextStyle(
-                      fontSize: 26,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
+                child: (user?.hasAvatar ?? false)
+                    ? null
+                    : Center(
+                        child: Text(
+                          (user?.name ?? 'U')[0].toUpperCase(),
+                          style: const TextStyle(
+                            fontSize: 26,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
               ),
               const SizedBox(width: 16),
               Expanded(

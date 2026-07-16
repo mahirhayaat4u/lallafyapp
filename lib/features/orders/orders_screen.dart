@@ -14,16 +14,16 @@ import '../../core/widgets/cached_image.dart';
 /// Orders tabs
 const _tabs = ['All', 'Pending', 'Confirmed', 'Delivered', 'Cancelled'];
 
-/// Orders provider — filterable by status
-final ordersProvider =
-    FutureProvider.family<Map<String, dynamic>, String?>((ref, status) async {
-  final queryParams = <String, dynamic>{'page': '1', 'limit': '20'};
-  if (status != null) queryParams['status'] = status;
-  final response = await DioClient().get(
-    ApiConstants.orders,
-    queryParameters: queryParams,
-  );
-  return response.data as Map<String, dynamic>;
+/// Orders provider — fetches ALL user orders once (backend doesn't support status filter)
+final allOrdersProvider =
+    FutureProvider<List<dynamic>>((ref) async {
+  final response = await DioClient().get(ApiConstants.myOrders);
+  final data = response.data;
+  final rawOrders = data['orders'] ??
+      (data['data'] is Map ? data['data']['orders'] : null) ??
+      data['data'] ??
+      [];
+  return (rawOrders as List<dynamic>);
 });
 
 /// Orders Screen — mirrors OrdersPage.tsx
@@ -39,12 +39,16 @@ class OrdersScreen extends ConsumerStatefulWidget {
 class _OrdersScreenState extends ConsumerState<OrdersScreen> {
   String _activeTab = 'All';
 
-  String? get _statusFilter =>
-      _activeTab == 'All' ? null : _activeTab.toLowerCase();
+  @override
+  void initState() {
+    super.initState();
+    // Always refetch orders when entering this screen
+    Future.microtask(() => ref.invalidate(allOrdersProvider));
+  }
 
   @override
   Widget build(BuildContext context) {
-    final ordersAsync = ref.watch(ordersProvider(_statusFilter));
+    final ordersAsync = ref.watch(allOrdersProvider);
 
     return Scaffold(
       backgroundColor: AppColors.bg,
@@ -96,21 +100,29 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
           ),
           const Divider(height: 1),
 
-          // ── Orders list ──
+          // ── Orders list (client-side filtered) ──
           Expanded(
             child: ordersAsync.when(
-              data: (data) {
-                final rawOrders = data['orders'] ??
-                    (data['data'] is Map ? data['data']['orders'] : null) ??
-                    data['data'] ??
-                    [];
-                final orders = rawOrders as List<dynamic>;
+              data: (allOrders) {
+                // Client-side filtering by orderStatus
+                final orders = _activeTab == 'All'
+                    ? allOrders
+                    : allOrders.where((o) {
+                        final status = (o['orderStatus'] ?? '').toString().toLowerCase();
+                        return status == _activeTab.toLowerCase();
+                      }).toList();
                 if (orders.isEmpty) return _buildEmpty();
-                return ListView.builder(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: orders.length,
-                  itemBuilder: (context, index) =>
-                      _OrderCard(order: orders[index]),
+                return RefreshIndicator(
+                  color: AppColors.primary,
+                  onRefresh: () async {
+                    ref.invalidate(allOrdersProvider);
+                  },
+                  child: ListView.builder(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: orders.length,
+                    itemBuilder: (context, index) =>
+                        _OrderCard(order: orders[index]),
+                  ),
                 );
               },
               loading: () =>
@@ -173,13 +185,13 @@ class _OrderCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final items = (order['orderItems'] ?? []) as List<dynamic>;
-    final status = order['status'] ?? 'pending';
-    final total = double.tryParse('${order['total']}') ?? 0;
+    final items = (order['items'] ?? order['orderItems'] ?? []) as List<dynamic>;
+    final status = (order['orderStatus'] ?? order['status'] ?? 'pending').toString();
+    final total = double.tryParse('${order['totalAmount'] ?? order['total'] ?? 0}') ?? 0;
     final paymentMethod = order['paymentMethod'];
 
     return GestureDetector(
-      onTap: () => context.push('/orders/${order['orderNumber']}'),
+      onTap: () => context.push('/orders/${order['_id'] ?? order['id']}'),
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.all(16),
@@ -262,8 +274,13 @@ class _OrderCard extends StatelessWidget {
                       ),
                     );
                   }
-                  final imageUrl =
-                      items[i]['product']?['images']?[0]?['url'];
+                  final itemProd = items[i]['product'];
+                  final prodMap = (itemProd is Map) ? itemProd : null;
+                  final prodImages = prodMap?['images'];
+                  final imageUrl = items[i]['image'] ??
+                      ((prodImages is List && prodImages.isNotEmpty)
+                          ? (prodImages[0] is String ? prodImages[0] : (prodImages[0] is Map ? prodImages[0]['url'] : null))
+                          : null);
                   return ClipRRect(
                     borderRadius:
                         BorderRadius.circular(AppTheme.radiusSm),
@@ -307,7 +324,7 @@ class _OrderCard extends StatelessWidget {
                       onPressed: () async {
                         try {
                           await DioClient().put(
-                              ApiConstants.orderCancel(order['id']));
+                              ApiConstants.orderCancel(order['_id'] ?? order['id']  ?? ''));
                           if (context.mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(

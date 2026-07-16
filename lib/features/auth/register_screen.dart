@@ -85,19 +85,18 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
             name: _nameController.text.trim(),
             email: _emailController.text.trim(),
             password: _passwordController.text,
-            phone: _phoneController.text.trim(),
           );
 
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Account created! Welcome to GiftsWale 🎉'),
+          content: Text('Account created! Welcome to Lallafy 🎉'),
           backgroundColor: AppColors.success,
         ),
       );
 
-      context.go('/');
+      context.go('/home');
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -199,12 +198,17 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
                           ),
                           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                           child: Image.asset(
-                            'assets/images/giftswale.jpg',
+                            'assets/images/lallafy.png',
                             fit: BoxFit.contain,
-                            errorBuilder: (context, error, stackTrace) => const Icon(
-                              Icons.card_giftcard_rounded,
-                              size: 32,
-                              color: Color(0xFFEF476F),
+                            errorBuilder: (context, error, stackTrace) => const Text(
+                              'Lallafy',
+                              style: TextStyle(
+                                fontFamily: 'Outfit',
+                                fontSize: 26,
+                                fontWeight: FontWeight.w900,
+                                color: Color(0xFFFF448C),
+                              ),
+                              textAlign: TextAlign.center,
                             ),
                           ),
                         ),
@@ -239,12 +243,12 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
                         const SizedBox(height: 8),
 
                         const Text(
-                          'Join GiftsWale today to find the perfect gifts',
+                          'Join Lallafy today to find the perfect toys & gifts',
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             fontFamily: 'Outfit',
-                            fontSize: 14,
-                            color: Color(0xFF5E5E6A),
+                            fontSize: 13,
+                            color: Color(0xFF6B7280),
                           ),
                         ),
 
@@ -372,7 +376,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
                                           value: _agreedToTerms,
                                           onChanged: (v) => setState(
                                               () => _agreedToTerms = v ?? false),
-                                          activeColor: const Color(0xFFEF476F),
+                                          activeColor: const Color(0xFFFF448C),
                                           shape: RoundedRectangleBorder(
                                             borderRadius:
                                                 BorderRadius.circular(6),
@@ -387,7 +391,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
                                       Expanded(
                                         child: Text.rich(
                                           TextSpan(
-                                            text: "I agree to GiftsWale's ",
+                                            text: "I agree to Lallafy's ",
                                             style: const TextStyle(
                                               fontFamily: 'Outfit',
                                               fontSize: 13,
@@ -398,7 +402,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
                                               const TextSpan(
                                                 text: 'Terms of Service',
                                                 style: TextStyle(
-                                                  color: Color(0xFFEF476F),
+                                                  color: Color(0xFFFF448C),
                                                   fontWeight: FontWeight.w600,
                                                 ),
                                               ),
@@ -406,7 +410,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
                                               const TextSpan(
                                                 text: 'Privacy Policy',
                                                 style: TextStyle(
-                                                  color: Color(0xFFEF476F),
+                                                  color: Color(0xFFFF448C),
                                                   fontWeight: FontWeight.w600,
                                                 ),
                                               ),

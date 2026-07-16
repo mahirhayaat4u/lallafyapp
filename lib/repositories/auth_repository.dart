@@ -12,8 +12,8 @@ import '../models/user.dart';
 class AuthRepository {
   final DioClient _client = DioClient();
 
-  /// POST /auth/login → { user, tokens }
-  Future<({User user, String accessToken, String refreshToken})> login({
+  /// POST /auth/login → { success, token, user }
+  Future<({User user, String token})> login({
     required String email,
     required String password,
   }) async {
@@ -21,20 +21,20 @@ class AuthRepository {
       ApiConstants.login,
       data: {'email': email, 'password': password},
     );
-    final data = response.data['data'];
+    final data = response.data;
+    final token = (data['token'] ?? data['data']?['token'] ?? '').toString();
+    final userJson = data['user'] ?? data['data']?['user'] ?? data;
     return (
-      user: User.fromJson(data['user']),
-      accessToken: data['tokens']['accessToken'] as String,
-      refreshToken: data['tokens']['refreshToken'] as String,
+      user: User.fromJson(Map<String, dynamic>.from(userJson as Map)),
+      token: token,
     );
   }
 
-  /// POST /auth/register → { user, tokens }
-  Future<({User user, String accessToken, String refreshToken})> register({
+  /// POST /auth/register → { success, token, user }
+  Future<({User user, String token})> register({
     required String name,
     required String email,
     required String password,
-    required String phone,
   }) async {
     final response = await _client.post(
       ApiConstants.register,
@@ -42,22 +42,23 @@ class AuthRepository {
         'name': name,
         'email': email,
         'password': password,
-        'phone': phone,
-        'role': 'customer',
       },
     );
-    final data = response.data['data'];
+    final data = response.data;
+    final token = (data['token'] ?? data['data']?['token'] ?? '').toString();
+    final userJson = data['user'] ?? data['data']?['user'] ?? data;
     return (
-      user: User.fromJson(data['user']),
-      accessToken: data['tokens']['accessToken'] as String,
-      refreshToken: data['tokens']['refreshToken'] as String,
+      user: User.fromJson(Map<String, dynamic>.from(userJson as Map)),
+      token: token,
     );
   }
 
   /// GET /auth/me → { user }
   Future<User> fetchMe() async {
     final response = await _client.get(ApiConstants.me);
-    return User.fromJson(response.data['data']['user']);
+    final data = response.data;
+    final userJson = data['user'] ?? data['data']?['user'] ?? data;
+    return User.fromJson(Map<String, dynamic>.from(userJson as Map));
   }
 
   /// POST /auth/logout
@@ -80,16 +81,18 @@ class AuthRepository {
         'If email exists, a reset link has been sent';
   }
 
-  /// PUT /auth/profile → { user }
+  /// PUT /users/profile → { success, user }
   Future<User> updateProfile({String? name, String? phone}) async {
+    final body = <String, dynamic>{};
+    if (name != null) body['name'] = name;
+    if (phone != null) body['phone'] = phone;
     final response = await _client.put(
       ApiConstants.updateProfile,
-      data: {
-        'name': ?name,
-        'phone': ?phone,
-      },
+      data: body,
     );
-    return User.fromJson(response.data['data']['user']);
+    final data = response.data;
+    final userJson = data['user'] ?? data['data']?['user'] ?? data;
+    return User.fromJson(Map<String, dynamic>.from(userJson as Map));
   }
 
   /// PUT /auth/password

@@ -15,14 +15,45 @@ import '../../core/widgets/badge_widget.dart';
 import '../../core/widgets/app_button.dart';
 import '../../models/product.dart';
 import '../../models/cart_item.dart';
+import '../../models/review.dart';
 import '../../providers/cart_provider.dart';
+import '../../providers/homepage_provider.dart';
+import '../home/widgets/product_card.dart';
 
-/// Product detail provider — fetches by slug
+class ProductDetailState {
+  final Product product;
+  final List<Product> relatedProducts;
+
+  const ProductDetailState({
+    required this.product,
+    this.relatedProducts = const [],
+  });
+}
+
+/// Product detail provider — fetches product & related products by id or slug
 final productDetailProvider =
-    FutureProvider.family<Product, String>((ref, slug) async {
-  final response = await DioClient().get(ApiConstants.productBySlug(slug));
-  final data = response.data['data'];
-  return Product.fromJson(data['product'] ?? data);
+    FutureProvider.family<ProductDetailState, String>((ref, idOrSlug) async {
+  final response = await DioClient().get(ApiConstants.productById(idOrSlug));
+  final data = response.data;
+  final Map<String, dynamic> rootMap =
+      (data is Map) ? Map<String, dynamic>.from(data) : {};
+
+  final productJson = rootMap['product'] ??
+      rootMap['data']?['product'] ??
+      rootMap['data'] ??
+      rootMap;
+  final product =
+      Product.fromJson(Map<String, dynamic>.from(productJson as Map));
+
+  final rawRelated = rootMap['relatedProducts'] as List<dynamic>? ?? [];
+  final relatedProducts = rawRelated
+      .map((e) => Product.fromJson(Map<String, dynamic>.from(e as Map)))
+      .toList();
+
+  return ProductDetailState(
+    product: product,
+    relatedProducts: relatedProducts,
+  );
 });
 
 /// Product Detail Screen — mirrors ProductDetailPage.tsx
@@ -45,14 +76,19 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final productAsync = ref.watch(productDetailProvider(widget.slug));
+    final detailAsync = ref.watch(productDetailProvider(widget.slug));
 
     return Scaffold(
       backgroundColor: AppColors.bg,
-      body: productAsync.when(
-        data: (product) => _buildProductDetail(product),
+      body: detailAsync.when(
+        data: (state) => _buildProductDetail(state.product, state.relatedProducts),
         loading: () => const LoadingWidget(message: 'Loading product...'),
         error: (err, _) => _buildError(err.toString()),
+      ),
+      bottomNavigationBar: detailAsync.when(
+        data: (state) => _buildStickyBottomBar(context, state.product),
+        loading: () => const SizedBox.shrink(),
+        error: (_, __) => const SizedBox.shrink(),
       ),
     );
   }
@@ -79,35 +115,31 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
     );
   }
 
-  Widget _buildProductDetail(Product product) {
+  Widget _buildProductDetail(Product product, List<Product> relatedProducts) {
     return CustomScrollView(
       slivers: [
-        // ── Collapsing App Bar with image ──
-        SliverAppBar(
-          expandedHeight: MediaQuery.of(context).size.width * 0.85,
+        // ── Sticky Pinned Top Header Bar (Pastel pink tint + Logo + Cart Badge) ──
+        SliverPersistentHeader(
           pinned: true,
-          leading: _circleButton(
-            icon: Icons.arrow_back_ios_rounded,
-            onTap: () => context.pop(),
+          delegate: _StickyHeaderDelegate(
+            topPadding: MediaQuery.of(context).padding.top,
+            child: _buildTopHeaderBar(context),
           ),
-          actions: [
-            _circleButton(
-              icon: Icons.favorite_border_rounded,
-              onTap: () {
-                // TODO: Phase 5 — wishlist toggle
-              },
+        ),
+
+        // ── Product Image Card with Rounded Top ──
+        SliverToBoxAdapter(
+          child: Container(
+            color: const Color(0xFFFFF2F5),
+            child: Container(
+              height: MediaQuery.of(context).size.width * 0.85,
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+              ),
+              clipBehavior: Clip.antiAlias,
+              child: _buildImageGallery(product),
             ),
-            const SizedBox(width: 8),
-            _circleButton(
-              icon: Icons.share_outlined,
-              onTap: () {
-                // TODO: share product
-              },
-            ),
-            const SizedBox(width: 12),
-          ],
-          flexibleSpace: FlexibleSpaceBar(
-            background: _buildImageGallery(product),
           ),
         ),
 
@@ -237,103 +269,23 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                   ),
                   const SizedBox(height: 24),
 
-                  // CTA buttons
-                  Row(
-                    children: [
-                      Expanded(
-                        child: AppButton(
-                          label: product.isInStock
-                              ? '🛒 Add to Cart'
-                              : 'Out of Stock',
-                          onPressed: product.isInStock
-                              ? () {
-                                  ref.read(cartProvider.notifier).addItem(
-                                    CartItem(
-                                      productId: product.id,
-                                      name: product.name,
-                                      slug: product.slug,
-                                      price: product.price,
-                                      discountPrice: product.discountPrice,
-                                      imageUrl: product.primaryImage,
-                                      storeName: product.storeName ?? 'GiftsWale',
-                                      stock: product.stock,
-                                    ),
-                                  );
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text(
-                                          '${product.name} added to cart!'),
-                                      backgroundColor: AppColors.success,
-                                    ),
-                                  );
-                                }
-                              : null,
-                          isFullWidth: true,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Container(
-                        height: 52,
-                        width: 52,
-                        decoration: BoxDecoration(
-                          color: AppColors.bgSurface,
-                          borderRadius:
-                              BorderRadius.circular(AppTheme.radiusMd),
-                          border: Border.all(color: AppColors.border),
-                        ),
-                        child: IconButton(
-                          onPressed: () {
-                            // TODO: Phase 5 — wishlist
-                          },
-                          icon: const Icon(Icons.favorite_border_rounded,
-                              color: AppColors.textMuted),
-                        ),
-                      ),
-                    ],
-                  ),
                   const SizedBox(height: 16),
 
-                  // Buy Now
-                  if (product.isInStock)
-                    SizedBox(
-                      width: double.infinity,
-                      child: OutlinedButton(
-                        onPressed: () {
-                          ref.read(cartProvider.notifier).addItem(
-                            CartItem(
-                              productId: product.id,
-                              name: product.name,
-                              slug: product.slug,
-                              price: product.price,
-                              discountPrice: product.discountPrice,
-                              imageUrl: product.primaryImage,
-                              storeName: product.storeName ?? 'GiftsWale',
-                              stock: product.stock,
-                            ),
-                          );
-                          context.go('/cart');
-                        },
-                        style: OutlinedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          side: const BorderSide(color: AppColors.primary),
-                          shape: RoundedRectangleBorder(
-                            borderRadius:
-                                BorderRadius.circular(AppTheme.radiusFull),
-                          ),
-                        ),
-                        child: Text(
-                          '⚡ Buy Now',
-                          style: AppTextStyles.bodySm.copyWith(
-                            color: AppColors.primary,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ),
-                    ),
-                  const SizedBox(height: 24),
+                  // Specifications Section
+                  if (product.specifications.isNotEmpty) ...[
+                    const SizedBox(height: 24),
+                    _buildSpecifications(product),
+                  ],
+
+                  // Description Images Section (Rich Product Features Gallery)
+                  if (product.descriptionImages.isNotEmpty) ...[
+                    const SizedBox(height: 24),
+                    _buildDescriptionImages(product),
+                  ],
 
                   // Store card
-                  if (product.storeName != null)
+                  if (product.storeName != null) ...[
+                    const SizedBox(height: 24),
                     GestureDetector(
                       onTap: () {
                         if (product.storeSlug != null) {
@@ -388,6 +340,17 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                         ),
                       ),
                     ),
+                  ],
+
+                  // Customer Reviews Section
+                  const SizedBox(height: 28),
+                  _buildReviewsSection(product),
+
+                  // Similar Products Section
+                  if (relatedProducts.isNotEmpty) ...[
+                    const SizedBox(height: 28),
+                    _buildSimilarProducts(context, relatedProducts),
+                  ],
                   const SizedBox(height: 40),
                 ],
               ),
@@ -447,7 +410,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
         // Discount badge
         if (product.hasDiscount)
           Positioned(
-            top: MediaQuery.of(context).padding.top + 56,
+            top: 16,
             left: 16,
             child: Container(
               padding:
@@ -467,6 +430,144 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
             ),
           ),
       ],
+    );
+  }
+
+  /// Top Header Bar matching user mockup (Pastel Pink + White Back button + Centered Logo + Wishlist/Cart Badge/Share)
+  Widget _buildTopHeaderBar(BuildContext context) {
+    final cartState = ref.watch(cartProvider);
+    final itemCount = cartState.totalItems;
+
+    return Container(
+      color: const Color(0xFFFFF2F5),
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Row(
+            children: [
+              // Square rounded Back button
+              GestureDetector(
+                onTap: () => context.pop(),
+                child: Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(14),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.04),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  alignment: Alignment.center,
+                  child: const Icon(
+                    Icons.chevron_left_rounded,
+                    color: Color(0xFF1F2937),
+                    size: 24,
+                  ),
+                ),
+              ),
+
+              // Centered Brand Logo
+              Expanded(
+                child: Center(
+                  child: Image.asset(
+                    'assets/images/lallafy.png',
+                    height: 40,
+                    fit: BoxFit.contain,
+                    errorBuilder: (context, error, stackTrace) {
+                      return const Text(
+                        'Lallafy',
+                        style: TextStyle(
+                          fontFamily: 'Outfit',
+                          fontSize: 22,
+                          fontWeight: FontWeight.w900,
+                          color: Color(0xFFFF448C),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ),
+
+              // Right Actions: Wishlist, Cart with Badge, Share
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Wishlist Icon
+                  IconButton(
+                    onPressed: () {
+                      // Wishlist action
+                    },
+                    icon: const Icon(
+                      Icons.favorite_border_rounded,
+                      color: Color(0xFF1F2937),
+                      size: 22,
+                    ),
+                  ),
+
+                  // Cart Icon with Badge Counter
+                  Stack(
+                    alignment: Alignment.center,
+                    clipBehavior: Clip.none,
+                    children: [
+                      IconButton(
+                        onPressed: () => context.push('/cart'),
+                        icon: const Icon(
+                          Icons.shopping_cart_outlined,
+                          color: Color(0xFF1F2937),
+                          size: 22,
+                        ),
+                      ),
+                      if (itemCount > 0)
+                        Positioned(
+                          top: 4,
+                          right: 4,
+                          child: Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: const BoxDecoration(
+                              color: Color(0xFFFF448C),
+                              shape: BoxShape.circle,
+                            ),
+                            constraints: const BoxConstraints(
+                              minWidth: 16,
+                              minHeight: 16,
+                            ),
+                            child: Text(
+                              '$itemCount',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 9,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+
+                  // Share Icon
+                  IconButton(
+                    onPressed: () {
+                      // Share action
+                    },
+                    icon: const Icon(
+                      Icons.share_outlined,
+                      color: Color(0xFF1F2937),
+                      size: 21,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
@@ -551,5 +652,557 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
         ),
       ),
     );
+  }
+
+  /// Sticky Bottom Navigation Bar — persistent CTA buttons fixed at bottom of screen
+  Widget _buildStickyBottomBar(BuildContext context, Product product) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        border: const Border(
+          top: BorderSide(color: Color(0xFFF3F4F6), width: 1),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 16,
+            offset: const Offset(0, -4),
+          ),
+        ],
+      ),
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          child: Row(
+            children: [
+              // Add to Cart Button (Bright Pink)
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: product.isInStock
+                      ? () {
+                          ref.read(cartProvider.notifier).addItem(
+                                CartItem(
+                                  productId: product.id,
+                                  name: product.name,
+                                  slug: product.slug,
+                                  price: product.price,
+                                  discountPrice: product.discountPrice,
+                                  imageUrl: product.primaryImage,
+                                  storeName: product.storeName ?? 'Lallafy',
+                                  stock: product.stock,
+                                  quantity: _qty,
+                                ),
+                              );
+                          ScaffoldMessenger.of(context).clearSnackBars();
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('${product.name} added to cart! 🛒'),
+                              backgroundColor: const Color(0xFFFF448C),
+                              duration: const Duration(seconds: 1),
+                              behavior: SnackBarBehavior.floating,
+                            ),
+                          );
+                        }
+                      : null,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFFF448C),
+                    disabledBackgroundColor: Colors.grey.shade300,
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(25),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.shopping_cart_outlined, size: 18),
+                      const SizedBox(width: 6),
+                      Text(
+                        product.isInStock ? 'Add to Cart' : 'Out of Stock',
+                        style: const TextStyle(
+                          fontFamily: 'Outfit',
+                          fontSize: 14,
+                          fontWeight: FontWeight.w800,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              if (product.isInStock) ...[
+                const SizedBox(width: 12),
+
+                // Buy Now Button (Dark Solid)
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () {
+                      ref.read(cartProvider.notifier).addItem(
+                            CartItem(
+                              productId: product.id,
+                              name: product.name,
+                              slug: product.slug,
+                              price: product.price,
+                              discountPrice: product.discountPrice,
+                              imageUrl: product.primaryImage,
+                              storeName: product.storeName ?? 'Lallafy',
+                              stock: product.stock,
+                              quantity: _qty,
+                            ),
+                          );
+                      context.push('/cart');
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF1A1C23),
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(25),
+                      ),
+                    ),
+                    child: const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text('⚡ ', style: TextStyle(fontSize: 14)),
+                        Text(
+                          'Buy Now',
+                          style: TextStyle(
+                            fontFamily: 'Outfit',
+                            fontSize: 14,
+                            fontWeight: FontWeight.w800,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Specifications list
+  Widget _buildSpecifications(Product product) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF9FAFB),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE5E7EB)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Specifications',
+            style: TextStyle(
+              fontFamily: 'Outfit',
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              color: Color(0xFF111827),
+            ),
+          ),
+          const SizedBox(height: 12),
+          ...product.specifications.map((spec) => Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      flex: 4,
+                      child: Text(
+                        spec['key'] ?? '',
+                        style: const TextStyle(
+                          fontFamily: 'Outfit',
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF6B7280),
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      flex: 6,
+                      child: Text(
+                        spec['value'] ?? '',
+                        style: const TextStyle(
+                          fontFamily: 'Outfit',
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                          color: Color(0xFF111827),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              )),
+        ],
+      ),
+    );
+  }
+
+  /// Description Images Gallery (matches Website ProductDetail layout)
+  Widget _buildDescriptionImages(Product product) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Product Overview & Features',
+          style: TextStyle(
+            fontFamily: 'Outfit',
+            fontSize: 18,
+            fontWeight: FontWeight.w700,
+            color: Color(0xFF111827),
+          ),
+        ),
+        const SizedBox(height: 12),
+        ...product.descriptionImages.map(
+          (imageUrl) => Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: CachedImage(
+                imageUrl: imageUrl,
+                width: double.infinity,
+                fit: BoxFit.cover,
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// Customer Reviews Section (matches Website Customer Reviews)
+  Widget _buildReviewsSection(Product product) {
+    final reviewsAsync = ref.watch(productReviewsProvider(product.id));
+
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFF3F4F6)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header: Title & Score
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Customer Reviews',
+                    style: TextStyle(
+                      fontFamily: 'Outfit',
+                      fontSize: 18,
+                      fontWeight: FontWeight.w800,
+                      color: Color(0xFF111827),
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    '${product.reviewCount} total ratings',
+                    style: const TextStyle(
+                      fontFamily: 'Outfit',
+                      fontSize: 12,
+                      color: Color(0xFF6B7280),
+                    ),
+                  ),
+                ],
+              ),
+
+              // Rating Score Badge
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFFBEB),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: const Color(0xFFFDE68A)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.star_rounded, size: 18, color: Color(0xFFFFC107)),
+                    const SizedBox(width: 4),
+                    Text(
+                      product.rating > 0 ? product.rating.toStringAsFixed(1) : '5.0',
+                      style: const TextStyle(
+                        fontFamily: 'Outfit',
+                        fontSize: 14,
+                        fontWeight: FontWeight.w800,
+                        color: Color(0xFF92400E),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 16),
+          const Divider(color: Color(0xFFF3F4F6), height: 1),
+          const SizedBox(height: 16),
+
+          // Reviews Async Content
+          reviewsAsync.when(
+            data: (reviews) {
+              if (reviews.isEmpty) {
+                return const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 20),
+                  child: Center(
+                    child: Text(
+                      'No reviews yet. Be the first to review this product! ⭐',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontFamily: 'Outfit',
+                        fontSize: 13,
+                        color: Color(0xFF9CA3AF),
+                      ),
+                    ),
+                  ),
+                );
+              }
+
+              return Column(
+                children: reviews.map((rev) => _buildReviewCard(rev)).toList(),
+              );
+            },
+            loading: () => const Center(
+              child: Padding(
+                padding: EdgeInsets.all(20),
+                child: CircularProgressIndicator(color: Color(0xFFFF448C)),
+              ),
+            ),
+            error: (_, __) => const SizedBox.shrink(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Single Customer Review Card
+  Widget _buildReviewCard(Review review) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 14),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF9FAFB),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFF3F4F6)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // User Avatar + Name + Rating Stars
+          Row(
+            children: [
+              CircleAvatar(
+                radius: 16,
+                backgroundColor: const Color(0xFFFFE4E6),
+                backgroundImage: review.userAvatar != null ? NetworkImage(review.userAvatar!) : null,
+                child: review.userAvatar == null
+                    ? Text(
+                        review.initials,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFFFF448C),
+                        ),
+                      )
+                    : null,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      review.userName,
+                      style: const TextStyle(
+                        fontFamily: 'Outfit',
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF1F2937),
+                      ),
+                    ),
+                    Row(
+                      children: List.generate(
+                        5,
+                        (index) => Icon(
+                          index < review.rating.round()
+                              ? Icons.star_rounded
+                              : Icons.star_outline_rounded,
+                          size: 13,
+                          color: index < review.rating.round()
+                              ? const Color(0xFFFFC107)
+                              : Colors.grey.shade300,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (review.createdAt != null)
+                Text(
+                  '${review.createdAt!.day}/${review.createdAt!.month}/${review.createdAt!.year}',
+                  style: const TextStyle(
+                    fontFamily: 'Outfit',
+                    fontSize: 11,
+                    color: Color(0xFF9CA3AF),
+                  ),
+                ),
+            ],
+          ),
+
+          // Title / Headline
+          if (review.title != null && review.title!.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(
+              review.title!,
+              style: const TextStyle(
+                fontFamily: 'Outfit',
+                fontSize: 13,
+                fontWeight: FontWeight.w800,
+                color: Color(0xFF111827),
+              ),
+            ),
+          ],
+
+          // Comment
+          if (review.comment.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            Text(
+              review.comment,
+              style: const TextStyle(
+                fontFamily: 'Outfit',
+                fontSize: 13,
+                height: 1.4,
+                color: Color(0xFF4B5563),
+              ),
+            ),
+          ],
+
+          // Attached Photos (if any)
+          if (review.images.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            SizedBox(
+              height: 60,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: review.images.length,
+                separatorBuilder: (_, __) => const SizedBox(width: 8),
+                itemBuilder: (context, idx) => ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: CachedImage(
+                    imageUrl: review.images[idx],
+                    width: 60,
+                    height: 60,
+                    fit: BoxFit.cover,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  /// Similar Products Section — matches website related products section
+  Widget _buildSimilarProducts(
+      BuildContext context, List<Product> relatedProducts) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text(
+              'Similar Products',
+              style: TextStyle(
+                fontFamily: 'Outfit',
+                fontSize: 18,
+                fontWeight: FontWeight.w800,
+                color: Color(0xFF111827),
+              ),
+            ),
+            GestureDetector(
+              onTap: () => context.push('/explore'),
+              child: const Text(
+                'View All →',
+                style: TextStyle(
+                  fontFamily: 'Outfit',
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFFFF448C),
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 14),
+        SizedBox(
+          height: 285,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: relatedProducts.length,
+            separatorBuilder: (_, __) => const SizedBox(width: 14),
+            itemBuilder: (context, index) {
+              final item = relatedProducts[index];
+              return ProductCard(
+                product: item,
+                width: 165,
+                onTap: () {
+                  context.push('/product/${item.id}');
+                },
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Persistent header delegate for keeping top navigation sticky on scroll
+class _StickyHeaderDelegate extends SliverPersistentHeaderDelegate {
+  final Widget child;
+  final double topPadding;
+
+  _StickyHeaderDelegate({required this.child, required this.topPadding});
+
+  @override
+  double get minExtent => topPadding + 56;
+
+  @override
+  double get maxExtent => topPadding + 56;
+
+  @override
+  Widget build(
+      BuildContext context, double shrinkOffset, bool overlapsContent) {
+    return SizedBox.expand(child: child);
+  }
+
+  @override
+  bool shouldRebuild(covariant _StickyHeaderDelegate oldDelegate) {
+    return oldDelegate.child != child || oldDelegate.topPadding != topPadding;
   }
 }

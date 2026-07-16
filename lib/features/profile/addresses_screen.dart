@@ -14,11 +14,16 @@ import '../../core/widgets/app_button.dart';
 final addressesProvider = FutureProvider<List<dynamic>>((ref) async {
   final response = await DioClient().get(ApiConstants.addresses);
   final data = response.data;
-  final rawAddresses = data['addresses'] ??
-      (data['data'] is Map ? data['data']['addresses'] : null) ??
-      data['data'] ??
-      [];
-  return rawAddresses as List<dynamic>;
+  // Backend returns plain array or wrapped in {addresses: [...]} or {data: [...]}
+  if (data is List) return data;
+  if (data is Map) {
+    final rawAddresses = data['addresses'] ??
+        (data['data'] is Map ? data['data']['addresses'] : null) ??
+        data['data'] ??
+        [];
+    if (rawAddresses is List) return rawAddresses;
+  }
+  return [];
 });
 
 class AddressesScreen extends ConsumerStatefulWidget {
@@ -216,7 +221,7 @@ class _AddressesScreenState extends ConsumerState<AddressesScreen> {
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          addr['line1'] ?? '',
+                          addr['address'] ?? addr['line1'] ?? '',
                           style: AppTextStyles.bodySm,
                         ),
                         Text(
@@ -330,7 +335,7 @@ class _AddressFormBottomSheetState extends State<_AddressFormBottomSheet> {
     final addr = widget.address;
     _nameCtrl = TextEditingController(text: addr?['name'] ?? '');
     _phoneCtrl = TextEditingController(text: addr?['phone'] ?? '');
-    _line1Ctrl = TextEditingController(text: addr?['line1'] ?? '');
+    _line1Ctrl = TextEditingController(text: addr?['address'] ?? addr?['line1'] ?? '');
     _cityCtrl = TextEditingController(text: addr?['city'] ?? '');
     _stateCtrl = TextEditingController(text: addr?['state'] ?? '');
     _pincodeCtrl = TextEditingController(text: addr?['pincode'] ?? '');
@@ -355,7 +360,7 @@ class _AddressFormBottomSheetState extends State<_AddressFormBottomSheet> {
       final data = {
         'name': _nameCtrl.text.trim(),
         'phone': _phoneCtrl.text.trim(),
-        'line1': _line1Ctrl.text.trim(),
+        'address': _line1Ctrl.text.trim(),
         'city': _cityCtrl.text.trim(),
         'state': _stateCtrl.text.trim(),
         'pincode': _pincodeCtrl.text.trim(),
@@ -364,7 +369,7 @@ class _AddressFormBottomSheetState extends State<_AddressFormBottomSheet> {
 
       if (widget.address != null) {
         // Edit existing
-        final id = widget.address['id'];
+        final id = widget.address['_id'] ?? widget.address['id'];
         await DioClient().put(ApiConstants.address(id), data: data);
       } else {
         // Create new

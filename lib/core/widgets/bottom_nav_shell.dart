@@ -3,18 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../theme/app_colors.dart';
-import '../theme/app_text_styles.dart';
-import '../theme/app_theme.dart';
-import '../../providers/cart_provider.dart';
 
-/// Bottom Navigation Shell — wraps tab screens with a persistent bottom bar
-///
-/// 💡 React Native equivalent: This is like your `createBottomTabNavigator`
-/// in React Navigation. The `navigationShell` is the GoRouter equivalent
-/// of React Navigation's tab navigator — it preserves each tab's navigation
-/// state independently.
-///
-/// 4 tabs: Home, Shop, Cart, Profile
+/// App Bottom Navigation Shell — matching exact design from screenshot
+/// Floating top-rounded white navigation bar with 4 tabs:
+/// Home, Explore, Categories, Profile
 class AppBottomNavShell extends ConsumerWidget {
   final StatefulNavigationShell navigationShell;
 
@@ -25,27 +17,26 @@ class AppBottomNavShell extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final cart = ref.watch(cartProvider);
-
     return Scaffold(
       body: navigationShell,
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
-          color: AppColors.bgCard,
-          border: Border(
-            top: BorderSide(color: AppColors.border, width: 1),
+          color: Colors.white,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          border: const Border(
+            top: BorderSide(color: Color(0xFFF3F4F6), width: 1),
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
-              blurRadius: 12,
-              offset: const Offset(0, -2),
+              color: Colors.black.withOpacity(0.06),
+              blurRadius: 18,
+              offset: const Offset(0, -4),
             ),
           ],
         ),
         child: SafeArea(
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
@@ -57,18 +48,17 @@ class AppBottomNavShell extends ConsumerWidget {
                   onTap: () => _onTap(0),
                 ),
                 _NavItem(
-                  icon: Icons.shopping_bag_outlined,
-                  activeIcon: Icons.shopping_bag_rounded,
-                  label: 'Shop',
+                  icon: Icons.grid_view_outlined,
+                  activeIcon: Icons.grid_view_rounded,
+                  label: 'Explore',
                   isActive: navigationShell.currentIndex == 1,
                   onTap: () => _onTap(1),
                 ),
                 _NavItem(
-                  icon: Icons.shopping_cart_outlined,
-                  activeIcon: Icons.shopping_cart_rounded,
-                  label: 'Cart',
+                  icon: Icons.grid_view_outlined,
+                  activeIcon: Icons.grid_view_rounded,
+                  label: 'Categories',
                   isActive: navigationShell.currentIndex == 2,
-                  badgeCount: cart.totalItems,
                   onTap: () => _onTap(2),
                 ),
                 _NavItem(
@@ -94,13 +84,12 @@ class AppBottomNavShell extends ConsumerWidget {
   }
 }
 
-/// Individual navigation item with badge support
+/// Navigation item matching screenshot typography and colors
 class _NavItem extends StatelessWidget {
   final IconData icon;
   final IconData activeIcon;
   final String label;
   final bool isActive;
-  final int badgeCount;
   final VoidCallback onTap;
 
   const _NavItem({
@@ -108,72 +97,35 @@ class _NavItem extends StatelessWidget {
     required this.activeIcon,
     required this.label,
     required this.isActive,
-    this.badgeCount = 0,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
+    const activeColor = Color(0xFFFF448C);
+    const inactiveColor = Color(0xFF525B6C);
+
     return GestureDetector(
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-        decoration: BoxDecoration(
-          color: isActive
-              ? AppColors.primary.withValues(alpha: 0.08)
-              : Colors.transparent,
-          borderRadius: BorderRadius.circular(AppTheme.radiusFull),
-        ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Stack(
-              clipBehavior: Clip.none,
-              children: [
-                Icon(
-                  isActive ? activeIcon : icon,
-                  size: 24,
-                  color: isActive ? AppColors.primary : AppColors.textMuted,
-                ),
-                // Badge
-                if (badgeCount > 0)
-                  Positioned(
-                    right: -8,
-                    top: -4,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 5, vertical: 1),
-                      decoration: BoxDecoration(
-                        color: AppColors.primary,
-                        borderRadius:
-                            BorderRadius.circular(AppTheme.radiusFull),
-                      ),
-                      constraints: const BoxConstraints(
-                        minWidth: 16,
-                        minHeight: 14,
-                      ),
-                      child: Text(
-                        badgeCount > 9 ? '9+' : '$badgeCount',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 9,
-                          fontWeight: FontWeight.w700,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
-                  ),
-              ],
+            Icon(
+              isActive ? activeIcon : icon,
+              size: 26,
+              color: isActive ? activeColor : inactiveColor,
             ),
-            const SizedBox(height: 2),
+            const SizedBox(height: 3),
             Text(
               label,
-              style: AppTextStyles.bodyXs.copyWith(
+              style: TextStyle(
+                fontFamily: 'Outfit',
                 fontSize: 11,
-                fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
-                color: isActive ? AppColors.primary : AppColors.textMuted,
+                fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
+                color: isActive ? activeColor : inactiveColor,
               ),
             ),
           ],

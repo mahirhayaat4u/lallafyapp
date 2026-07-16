@@ -21,7 +21,7 @@ class Category {
       id: (json['id'] ?? json['_id'] ?? '').toString(),
       name: json['name'] as String,
       slug: json['slug'] as String,
-      imageUrl: json['imageUrl'] as String?,
+      imageUrl: json['imageUrl'] as String? ?? json['image'] as String?,
       productCount: json['_count']?['products'] as int? ?? 0,
       children: (json['children'] as List<dynamic>?)
               ?.map((e) => Category.fromJson(e as Map<String, dynamic>))

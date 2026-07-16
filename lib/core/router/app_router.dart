@@ -3,11 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../features/home/home_screen.dart';
+import '../../features/splash/splash_screen.dart';
 import '../../features/auth/login_screen.dart';
 import '../../features/auth/register_screen.dart';
 import '../../features/auth/forgot_password_screen.dart';
 import '../../features/shop/shop_screen.dart';
 import '../../features/shop/product_detail_screen.dart';
+import '../../features/shop/categories_screen.dart';
 import '../../features/cart/cart_screen.dart';
 import '../../features/wishlist/wishlist_screen.dart';
 import '../../features/checkout/checkout_screen.dart';
@@ -51,13 +53,20 @@ GoRouter createRouter(Ref ref) {
       if (!isLoggedIn && isProtected) return '/login';
 
       // If user is logged in and tries to visit auth pages → go home
-      if (isLoggedIn && isAuthRoute) return '/';
+      if (isLoggedIn && isAuthRoute) return '/home';
 
       // No redirect needed
       return null;
     },
 
     routes: [
+      // ─── Splash Route (NO bottom navigation) ─────────────────
+      GoRoute(
+        path: '/',
+        name: 'splash',
+        builder: (context, state) => const SplashScreen(),
+      ),
+
       // ─── Auth Routes (NO bottom navigation) ──────────────────
       GoRoute(
         path: '/login',
@@ -87,7 +96,7 @@ GoRouter createRouter(Ref ref) {
           StatefulShellBranch(
             routes: [
               GoRoute(
-                path: '/',
+                path: '/home',
                 name: 'home',
                 builder: (context, state) => const HomeScreen(),
               ),
@@ -102,6 +111,8 @@ GoRouter createRouter(Ref ref) {
                 name: 'shop',
                 builder: (context, state) {
                   final category = state.uri.queryParameters['category'];
+                  final subCategory = state.uri.queryParameters['subCategory'];
+                  final ageGroup = state.uri.queryParameters['ageGroup'];
                   final search = state.uri.queryParameters['search'];
                   final tag = state.uri.queryParameters['tag'];
                   final occasion = state.uri.queryParameters['occasion'];
@@ -109,8 +120,14 @@ GoRouter createRouter(Ref ref) {
                   final sort = state.uri.queryParameters['sort'];
                   final ids = state.uri.queryParameters['ids'];
                   final title = state.uri.queryParameters['title'];
+                  final minPriceStr = state.uri.queryParameters['minPrice'];
+                  final maxPriceStr = state.uri.queryParameters['maxPrice'];
+                  final minPrice = minPriceStr != null ? double.tryParse(minPriceStr) : null;
+                  final maxPrice = maxPriceStr != null ? double.tryParse(maxPriceStr) : null;
                   return ShopScreen(
                     initialCategory: category,
+                    initialSubCategory: subCategory,
+                    initialAgeGroup: ageGroup,
                     initialSearch: search,
                     initialTag: tag,
                     initialOccasion: occasion,
@@ -118,19 +135,21 @@ GoRouter createRouter(Ref ref) {
                     initialSort: sort,
                     initialIds: ids,
                     initialTitle: title,
+                    initialMinPrice: minPrice,
+                    initialMaxPrice: maxPrice,
                   );
                 },
               ),
             ],
           ),
 
-          // ── Tab 2: Cart ──
+          // ── Tab 2: Categories ──
           StatefulShellBranch(
             routes: [
               GoRoute(
-                path: '/cart',
-                name: 'cart',
-                builder: (context, state) => const CartScreen(),
+                path: '/categories',
+                name: 'categories',
+                builder: (context, state) => const CategoriesScreen(),
               ),
             ],
           ),
@@ -150,6 +169,15 @@ GoRouter createRouter(Ref ref) {
 
       // ─── Overlay Routes (push ON TOP of bottom nav) ──────────
       // These routes slide in as full-screen pages over the tab shell.
+      GoRoute(
+        path: '/categories',
+        builder: (context, state) => const CategoriesScreen(),
+      ),
+      GoRoute(
+        path: '/cart',
+        name: 'cart',
+        builder: (context, state) => const CartScreen(),
+      ),
       GoRoute(
         path: '/product/:slug',
         name: 'product-detail',
@@ -181,11 +209,11 @@ GoRouter createRouter(Ref ref) {
         builder: (context, state) => const OrdersScreen(),
       ),
       GoRoute(
-        path: '/orders/:orderNumber',
+        path: '/orders/:orderId',
         name: 'order-detail',
         builder: (context, state) {
-          final orderNumber = state.pathParameters['orderNumber']!;
-          return OrderDetailScreen(orderNumber: orderNumber);
+          final orderId = state.pathParameters['orderId']!;
+          return OrderDetailScreen(orderId: orderId);
         },
       ),
       GoRoute(
@@ -222,7 +250,7 @@ GoRouter createRouter(Ref ref) {
             ),
             const SizedBox(height: 24),
             ElevatedButton(
-              onPressed: () => context.go('/'),
+              onPressed: () => context.go('/home'),
               child: const Text('Go Home'),
             ),
           ],
