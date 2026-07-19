@@ -1,0 +1,119 @@
+workflows:
+  # ═══════════════════════════════════════════════════════════
+  # Android Release Build
+  # ═══════════════════════════════════════════════════════════
+  android-release:
+    name: Android Release Build
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+    environment:
+      flutter: stable
+      java: 17
+    scripts:
+      - name: Get Flutter packages
+        script: flutter pub get
+
+      - name: Build Android APK
+        script: flutter build apk --release
+
+    artifacts:
+      - build/app/outputs/flutter-apk/app-release.apk
+
+  # ═══════════════════════════════════════════════════════════
+  # iOS Release Build
+  # ═══════════════════════════════════════════════════════════
+  ios-release:
+    name: iOS Release Build
+    max_build_duration: 90
+    instance_type: mac_mini_m2
+    environment:
+      flutter: stable
+      xcode: latest
+      cocoapods: default
+      # ──────────────────────────────────────────────────────
+      # ⚠️ IMPORTANT: Apple Signing (uncomment after setup)
+      # Go to Codemagic → Settings → Code Signing → iOS
+      # Upload your Apple Distribution Certificate & Provisioning Profile
+      # Then uncomment the lines below:
+      # ──────────────────────────────────────────────────────
+      # ios_signing:
+      #   distribution_type: app_store
+      #   bundle_identifier: com.lallafy.app
+
+    scripts:
+      # Step 1: Create iOS platform if missing
+      - name: Create iOS platform
+        script: |
+          if [ ! -d "ios" ]; then
+            echo "iOS directory not found. Creating iOS platform..."
+            flutter create --platforms=ios .
+          else
+            echo "iOS directory already exists."
+          fi
+
+      # Step 2: Update iOS Bundle ID & Display Name
+      - name: Configure iOS app identity
+        script: |
+          # Set Bundle Identifier
+          /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier com.lallafy.app" ios/Runner/Info.plist 2>/dev/null || true
+
+          # Set Display Name to "Lallafy"
+          /usr/libexec/PlistBuddy -c "Set :CFBundleDisplayName Lallafy" ios/Runner/Info.plist 2>/dev/null || \
+          /usr/libexec/PlistBuddy -c "Add :CFBundleDisplayName string Lallafy" ios/Runner/Info.plist
+
+          # Set Bundle Name
+          /usr/libexec/PlistBuddy -c "Set :CFBundleName Lallafy" ios/Runner/Info.plist 2>/dev/null || true
+
+      # Step 3: Add required URL schemes for url_launcher (WhatsApp, Phone, Email)
+      - name: Add URL schemes to Info.plist
+        script: |
+          INFO_PLIST="ios/Runner/Info.plist"
+
+          # Add LSApplicationQueriesSchemes if not present
+          /usr/libexec/PlistBuddy -c "Add :LSApplicationQueriesSchemes array" "$INFO_PLIST" 2>/dev/null || true
+          /usr/libexec/PlistBuddy -c "Add :LSApplicationQueriesSchemes: string tel" "$INFO_PLIST" 2>/dev/null || true
+          /usr/libexec/PlistBuddy -c "Add :LSApplicationQueriesSchemes: string mailto" "$INFO_PLIST" 2>/dev/null || true
+          /usr/libexec/PlistBuddy -c "Add :LSApplicationQueriesSchemes: string https" "$INFO_PLIST" 2>/dev/null || true
+          /usr/libexec/PlistBuddy -c "Add :LSApplicationQueriesSchemes: string whatsapp" "$INFO_PLIST" 2>/dev/null || true
+
+          echo "✅ URL schemes added to Info.plist"
+
+      # Step 4: Update iOS launcher icon config
+      - name: Generate iOS launcher icons
+        script: |
+          # Temporarily add ios: true to flutter_launcher_icons config
+          # and regenerate icons
+          dart run flutter_launcher_icons 2>/dev/null || echo "Launcher icons: skipped (will use default)"
+
+      # Step 5: Install CocoaPods dependencies
+      - name: Install CocoaPods
+        script: |
+          cd ios
+          pod install --repo-update
+          cd ..
+
+      # Step 6: Get Flutter packages
+      - name: Get Flutter packages
+        script: flutter pub get
+
+      # Step 7: Build iOS (unsigned for testing / signed for App Store)
+      - name: Build iOS IPA
+        script: |
+          # ──────────────────────────────────────────────
+          # Without Apple signing → builds debug .app
+          # With Apple signing   → builds release .ipa
+          # ──────────────────────────────────────────────
+          flutter build ios --release --no-codesign
+
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - build/ios/archive/*.xcarchive
+      - build/ios/Release-iphoneos/*.app
+
+    publishing:
+      email:
+        recipients:
+          - mahirhayat4u@gmail.com
+        notify:
+          success: true
+          failure: true
