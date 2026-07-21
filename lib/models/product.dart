@@ -92,6 +92,11 @@ class Product {
     final avgRating = json['ratingsAverage'] ?? json['avgRating'] ?? 0;
     final revCount = json['ratingsCount'] ?? json['reviewCount'] ?? json['_count']?['reviews'] ?? 0;
 
+    final rawStock = json['stock'] ?? json['quantity'] ?? json['countInStock'] ?? json['inventory'];
+    final parsedStock = rawStock != null
+        ? (rawStock is String ? int.tryParse(rawStock) ?? 0 : (rawStock as num).toInt())
+        : (json['inStock'] == false ? 0 : 999);
+
     return Product(
       id: (json['id'] ?? json['_id'] ?? '').toString(),
       name: json['name'] as String? ?? 'Product',
@@ -112,6 +117,7 @@ class Product {
       reviewCount: (revCount is String
           ? int.tryParse(revCount) ?? 0
           : (revCount as num).toInt()),
+      stock: parsedStock,
       isFeatured: json['isFeatured'] as bool? ?? false,
       isBestSeller: json['isBestSeller'] as bool? ?? false,
       isGifting: json['isGifting'] as bool? ?? false,
