@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/theme/app_colors.dart';
@@ -125,7 +126,7 @@ class _SupportScreenState extends State<SupportScreen> {
                           icon: Icons.chat_bubble_outline_rounded,
                           label: 'WhatsApp',
                           color: const Color(0xFF25D366),
-                          onTap: () => _launchUrl('https://wa.me/919876543210?text=Hi%20Lallafy%20Support!'),
+                          onTap: () => _launchUrl('https://wa.me/917290900282?text=Hi%20Lallafy%20Support!'),
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -135,19 +136,42 @@ class _SupportScreenState extends State<SupportScreen> {
                           icon: Icons.phone_in_talk_outlined,
                           label: 'Call Support',
                           color: AppColors.primary,
-                          onTap: () => _launchUrl('tel:+919876543210'),
+                          onTap: () => _launchUrl('tel:+917290900282'),
                         ),
                       ),
                     ],
                   ),
                   const SizedBox(height: 12),
-                  // Email Option
-                  _contactCard(
-                    icon: Icons.mail_outline_rounded,
-                    label: 'Email support@lallafy.com',
-                    color: AppColors.textMuted,
-                    isFullWidth: true,
-                    onTap: () => _launchUrl('mailto:support@lallafy.com?subject=Lallafy%20Order%20Help'),
+                  // Terms & Conditions Link Card
+                  GestureDetector(
+                    onTap: () => context.push('/terms'),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withValues(alpha: 0.05),
+                        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+                        border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(Icons.gavel_rounded, color: AppColors.primary, size: 20),
+                              const SizedBox(width: 10),
+                              Text(
+                                'Terms & Conditions',
+                                style: AppTextStyles.bodySm.copyWith(
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.primary,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const Icon(Icons.arrow_forward_ios_rounded, color: AppColors.primary, size: 16),
+                        ],
+                      ),
+                    ),
                   ),
                 ],
               ),

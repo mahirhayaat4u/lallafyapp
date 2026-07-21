@@ -54,7 +54,13 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
       backgroundColor: AppColors.bg,
       appBar: AppBar(
         leading: IconButton(
-          onPressed: () => context.pop(),
+          onPressed: () {
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.go('/home');
+            }
+          },
           icon: const Icon(Icons.arrow_back_ios_rounded, size: 20),
         ),
         title: const Text('My Orders'),
@@ -157,7 +163,7 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
             ),
             const SizedBox(height: 24),
             ElevatedButton(
-              onPressed: () => context.push('/shop'),
+              onPressed: () => context.go('/shop'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
                 foregroundColor: Colors.white,
@@ -178,13 +184,13 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
 }
 
 /// Individual order card
-class _OrderCard extends StatelessWidget {
+class _OrderCard extends ConsumerWidget {
   final dynamic order;
 
   const _OrderCard({required this.order});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final items = (order['items'] ?? order['orderItems'] ?? []) as List<dynamic>;
     final status = (order['orderStatus'] ?? order['status'] ?? 'pending').toString();
     final total = double.tryParse('${order['totalAmount'] ?? order['total'] ?? 0}') ?? 0;
@@ -325,15 +331,26 @@ class _OrderCard extends StatelessWidget {
                         try {
                           await DioClient().put(
                               ApiConstants.orderCancel(order['_id'] ?? order['id']  ?? ''));
+                          // Refresh orders list
+                          ref.invalidate(allOrdersProvider);
                           if (context.mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
-                                content: Text('Order cancelled'),
+                                content: Text('Order cancelled successfully ✅'),
                                 backgroundColor: AppColors.success,
                               ),
                             );
                           }
-                        } catch (_) {}
+                        } catch (e) {
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Failed to cancel: $e'),
+                                backgroundColor: AppColors.danger,
+                              ),
+                            );
+                          }
+                        }
                       },
                       child: Text(
                         '✕ Cancel',

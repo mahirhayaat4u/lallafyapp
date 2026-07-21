@@ -160,60 +160,76 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final auth = ref.watch(authProvider);
     final user = auth.user;
 
-    return Scaffold(
-      backgroundColor: AppColors.bg,
-      appBar: AppBar(
-        automaticallyImplyLeading: false,
-        title: const Text('My Account'),
-      ),
-      body: ListView(
-        padding: const EdgeInsets.all(20),
-        children: [
-          // ── Profile card ──
-          _buildProfileCard(user),
-          const SizedBox(height: 16),
-
-          // ── Change password card ──
-          if (!_isEditing) _buildPasswordCard(),
-          const SizedBox(height: 24),
-
-          // ── Quick links ──
-          _quickLink(Icons.shopping_bag_outlined, 'My Orders', '/orders'),
-          _quickLink(Icons.favorite_outline, 'My Wishlist', '/wishlist'),
-          _quickLink(Icons.location_on_outlined, 'Saved Addresses', '/addresses'),
-          _quickLink(Icons.shopping_cart_outlined, 'My Cart', '/cart'),
-          const SizedBox(height: 24),
-
-          // ── Logout ──
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton.icon(
-              onPressed: () {
-                ref.read(authProvider.notifier).logout();
+    return PopScope(
+      canPop: context.canPop(),
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        context.go('/home');
+      },
+      child: Scaffold(
+        backgroundColor: AppColors.bg,
+        appBar: AppBar(
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_ios_rounded, size: 20),
+            onPressed: () {
+              if (context.canPop()) {
+                context.pop();
+              } else {
                 context.go('/home');
-              },
-              icon: const Icon(Icons.logout_rounded,
-                  size: 18, color: AppColors.danger),
-              label: Text(
-                'Logout',
-                style: AppTextStyles.bodySm.copyWith(
-                  color: AppColors.danger,
-                  fontWeight: FontWeight.w600,
+              }
+            },
+          ),
+          title: const Text('My Account'),
+        ),
+        body: ListView(
+          padding: const EdgeInsets.all(20),
+          children: [
+            // ── Profile card ──
+            _buildProfileCard(user),
+            const SizedBox(height: 16),
+
+            // ── Change password card ──
+            if (!_isEditing) _buildPasswordCard(),
+            const SizedBox(height: 24),
+
+            // ── Quick links ──
+            _quickLink(Icons.shopping_bag_outlined, 'My Orders', '/orders'),
+            _quickLink(Icons.favorite_outline, 'My Wishlist', '/wishlist'),
+            _quickLink(Icons.location_on_outlined, 'Saved Addresses', '/addresses'),
+            _quickLink(Icons.shopping_cart_outlined, 'My Cart', '/cart'),
+            const SizedBox(height: 24),
+
+            // ── Logout ──
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () {
+                  ref.read(authProvider.notifier).logout();
+                  context.go('/home');
+                },
+                icon: const Icon(Icons.logout_rounded,
+                    size: 18, color: AppColors.danger),
+                label: Text(
+                  'Logout',
+                  style: AppTextStyles.bodySm.copyWith(
+                    color: AppColors.danger,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
-              ),
-              style: OutlinedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                side: BorderSide(
-                    color: AppColors.danger.withValues(alpha: 0.3)),
-                shape: RoundedRectangleBorder(
-                  borderRadius:
-                      BorderRadius.circular(AppTheme.radiusFull),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  side: BorderSide(
+                      color: AppColors.danger.withValues(alpha: 0.3)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius:
+                        BorderRadius.circular(AppTheme.radiusFull),
+                  ),
                 ),
               ),
             ),
-          ),
-          const SizedBox(height: 40),
-        ],
+            const SizedBox(height: 40),
+          ],
+        ),
       ),
     );
   }

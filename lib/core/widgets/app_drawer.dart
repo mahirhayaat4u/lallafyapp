@@ -74,7 +74,7 @@ class AppDrawer extends ConsumerWidget {
                   label: 'Explore Toys',
                   onTap: () {
                     context.pop();
-                    context.go('/shop');
+                    context.go('/categories');
                   },
                 ),
                 _drawerTile(
@@ -82,7 +82,7 @@ class AppDrawer extends ConsumerWidget {
                   label: 'Categories',
                   onTap: () {
                     context.pop();
-                    context.go('/shop'); // Go to shop/explore
+                    context.go('/categories'); // Go to categories
                   },
                 ),
                 const Divider(),
@@ -100,6 +100,14 @@ class AppDrawer extends ConsumerWidget {
                   onTap: () {
                     context.pop();
                     context.push('/wishlist');
+                  },
+                ),
+                _drawerTile(
+                  icon: Icons.person_outline_rounded,
+                  label: 'My Profile',
+                  onTap: () {
+                    context.pop();
+                    context.go('/profile');
                   },
                 ),
                 _drawerTile(

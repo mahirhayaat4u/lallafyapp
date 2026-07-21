@@ -17,7 +17,18 @@ class AppBottomNavShell extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return Scaffold(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        // If not on home tab, go to home tab
+        if (navigationShell.currentIndex != 0) {
+          navigationShell.goBranch(0);
+        }
+        // If already on home tab, let system handle it (exit app)
+        // We don't pop here, so the app stays open on home tab
+      },
+      child: Scaffold(
       body: navigationShell,
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
@@ -72,6 +83,7 @@ class AppBottomNavShell extends ConsumerWidget {
             ),
           ),
         ),
+      ),
       ),
     );
   }

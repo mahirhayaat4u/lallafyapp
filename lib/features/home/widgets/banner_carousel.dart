@@ -97,7 +97,7 @@ class _BannerCarouselState extends State<BannerCarousel> {
       imageUrl: banner.imageUrl,
       width: double.infinity,
       height: 180,
-      fit: BoxFit.cover,
+      fit: BoxFit.fill,
     );
   }
 
@@ -182,10 +182,13 @@ class _BannerCarouselState extends State<BannerCarousel> {
         ),
         // Right half — image
         Expanded(
-          child: CachedImage(
-            imageUrl: banner.imageUrl,
-            height: 180,
-            fit: BoxFit.cover,
+          child: Padding(
+            padding: const EdgeInsets.all(8),
+            child: CachedImage(
+              imageUrl: banner.imageUrl,
+              height: 180,
+              fit: BoxFit.contain,
+            ),
           ),
         ),
       ],

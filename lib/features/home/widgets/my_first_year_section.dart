@@ -75,7 +75,7 @@ class MyFirstYearSection extends ConsumerWidget {
                 ),
               ),
               GestureDetector(
-                onTap: () => context.push('/shop?ageGroup=0–1 Years'),
+                onTap: () => context.go('/shop?ageGroup=0–1 Years'),
                 child: Padding(
                   padding: const EdgeInsets.only(bottom: 2, left: 8),
                   child: Row(
@@ -145,11 +145,11 @@ class MyFirstYearSection extends ConsumerWidget {
             GestureDetector(
               onTap: () {
                 if (banner?.categoryId != null) {
-                  context.push('/shop?category=${banner!.categoryId}');
+                  context.go('/shop?category=${banner!.categoryId}');
                 } else if (featuredProduct != null) {
                   context.push('/product/${featuredProduct.id}');
                 } else {
-                  context.push('/shop?ageGroup=0–1 Years');
+                  context.go('/shop?ageGroup=0–1 Years');
                 }
               },
               child: Container(
@@ -166,89 +166,9 @@ class MyFirstYearSection extends ConsumerWidget {
                   ],
                 ),
                 clipBehavior: Clip.antiAlias,
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    CachedImage(
-                      imageUrl: bannerImg,
-                      fit: BoxFit.cover,
-                    ),
-
-                    // Gradient Overlay
-                    Container(
-                      decoration: const BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [
-                            Colors.transparent,
-                            Color(0x30000000),
-                            Color(0xDD000000),
-                          ],
-                          stops: [0.0, 0.4, 1.0],
-                        ),
-                      ),
-                    ),
-
-                    // Content
-                    Positioned(
-                      bottom: 16,
-                      left: 16,
-                      right: 16,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.25),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: const [
-                                Text('🍼 ', style: TextStyle(fontSize: 10)),
-                                Text(
-                                  '0–1 YEARS',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.bold,
-                                    letterSpacing: 1,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            banner?.title ?? featuredProduct?.name ?? 'My First Toy Collection',
-                            style: const TextStyle(
-                              fontFamily: 'Outfit',
-                              fontSize: 18,
-                              fontWeight: FontWeight.w900,
-                              color: Colors.white,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          if (featuredProduct != null && banner == null) ...[
-                            const SizedBox(height: 4),
-                            Text(
-                              '₹${featuredProduct.price.toStringAsFixed(0)}',
-                              style: const TextStyle(
-                                fontFamily: 'Outfit',
-                                fontSize: 15,
-                                fontWeight: FontWeight.w800,
-                                color: Colors.white,
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
-                  ],
+                child: CachedImage(
+                  imageUrl: bannerImg,
+                  fit: BoxFit.cover,
                 ),
               ),
             ),

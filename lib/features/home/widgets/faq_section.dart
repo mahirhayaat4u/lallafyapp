@@ -201,48 +201,6 @@ class _FaqSectionState extends State<FaqSection> {
                   ),
                   textAlign: TextAlign.center,
                 ),
-                const SizedBox(height: 16),
-
-                // ── Search Input ──
-                Container(
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade50,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: Colors.grey.shade200),
-                  ),
-                  child: TextField(
-                    controller: _searchController,
-                    onChanged: (val) {
-                      setState(() {
-                        _searchQuery = val;
-                        _expandedIndex = null;
-                      });
-                    },
-                    decoration: InputDecoration(
-                      hintText: 'Search your question...',
-                      hintStyle: TextStyle(
-                        fontFamily: 'Outfit',
-                        fontSize: 13,
-                        color: Colors.grey.shade400,
-                      ),
-                      prefixIcon: const Icon(Icons.search_rounded, color: Color(0xFFFF448C)),
-                      suffixIcon: _searchQuery.isNotEmpty
-                          ? IconButton(
-                              icon: const Icon(Icons.close_rounded, size: 18),
-                              onPressed: () {
-                                _searchController.clear();
-                                setState(() {
-                                  _searchQuery = '';
-                                  _expandedIndex = null;
-                                });
-                              },
-                            )
-                          : null,
-                      border: InputBorder.none,
-                      contentPadding: const EdgeInsets.symmetric(vertical: 12),
-                    ),
-                  ),
-                ),
               ],
             ),
           ),

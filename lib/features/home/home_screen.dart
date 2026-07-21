@@ -13,6 +13,7 @@ import '../../core/widgets/app_drawer.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/homepage_provider.dart';
 import '../../providers/cart_provider.dart';
+import '../../providers/wishlist_provider.dart';
 import '../../models/category.dart';
 import '../../models/homepage_card.dart';
 import '../../models/age_group.dart';
@@ -86,6 +87,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     );
     _curveAnimController.addListener(() {
       setState(() {});
+    });
+
+    // Fetch wishlist if user is logged in
+    Future.microtask(() {
+      final auth = ref.read(authProvider);
+      if (auth.isAuthenticated) {
+        ref.read(wishlistProvider.notifier).fetchWishlist();
+      }
     });
   }
 
@@ -327,7 +336,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                     const SizedBox(height: 30),
 
               // ── Footer ──
-              _buildFooter(context),
+              const SizedBox.shrink(),
 
               const SizedBox(height: 24),
             ],
@@ -595,37 +604,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   }
 
   Widget _buildFooter(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      margin: const EdgeInsets.symmetric(horizontal: AppTheme.pagePadding),
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: AppColors.bgSurface,
-        borderRadius: BorderRadius.circular(AppTheme.radiusXl),
-      ),
-      child: Column(
-        children: [
-          Image.asset(
-            'assets/images/giftswale.jpg',
-            height: 48,
-            fit: BoxFit.contain,
-            errorBuilder: (context, error, stackTrace) => const Icon(
-              Icons.card_giftcard_rounded,
-              size: 32,
-              color: AppColors.primary,
-            ),
-          ),
-          const SizedBox(height: 12),
-          Text('GiftsWale', style: AppTextStyles.h3),
-          const SizedBox(height: 4),
-          Text(
-            'Gift Your Loved Ones ❤️',
-            style:
-                AppTextStyles.bodySm.copyWith(color: AppColors.textMuted),
-          ),
-        ],
-      ),
-    );
+    return const SizedBox.shrink();
   }
 }
 
@@ -738,7 +717,7 @@ class _SubcategoriesSection extends ConsumerWidget {
             key: ValueKey(parentCategory.id),
             categories: children,
             onCategoryTap: (slug) {
-              context.push('/shop?category=$slug');
+              context.go('/shop?category=$slug');
             },
           ),
         );
@@ -1136,7 +1115,7 @@ class _ShopByCategorySection extends ConsumerWidget {
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 3),
             child: GestureDetector(
-              onTap: () => context.push('/shop?ageGroup=${Uri.encodeComponent(item.label)}'),
+              onTap: () => context.go('/shop?ageGroup=${Uri.encodeComponent(item.label)}'),
               child: SizedBox(
                 height: 96,
                 child: Stack(
@@ -1254,7 +1233,7 @@ class _ShopByPriceSection extends StatelessWidget {
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 3),
                   child: GestureDetector(
-                    onTap: () => context.push('/shop?minPrice=${item.min}&maxPrice=${item.max}'),
+                    onTap: () => context.go('/shop?minPrice=${item.min}&maxPrice=${item.max}'),
                     child: SizedBox(
                       height: 96,
                       child: Stack(

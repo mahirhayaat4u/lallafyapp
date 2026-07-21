@@ -70,7 +70,7 @@ class MagicOfGiftingSection extends ConsumerWidget {
                 ),
               ),
               GestureDetector(
-                onTap: () => context.push('/shop?gifting=true'),
+                onTap: () => context.go('/shop?tag=gifting&title=Unwrap the Magic of Gifting'),
                 child: Padding(
                   padding: const EdgeInsets.only(bottom: 2, left: 8),
                   child: Row(
@@ -140,11 +140,11 @@ class MagicOfGiftingSection extends ConsumerWidget {
             GestureDetector(
               onTap: () {
                 if (banner?.categoryId != null) {
-                  context.push('/shop?category=${banner!.categoryId}');
+                  context.go('/shop?category=${banner!.categoryId}');
                 } else if (featuredProduct != null) {
                   context.push('/product/${featuredProduct.id}');
                 } else {
-                  context.push('/shop?gifting=true');
+                  context.go('/shop?tag=gifting&title=Unwrap the Magic of Gifting');
                 }
               },
               child: Container(
@@ -161,89 +161,9 @@ class MagicOfGiftingSection extends ConsumerWidget {
                   ],
                 ),
                 clipBehavior: Clip.antiAlias,
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    CachedImage(
-                      imageUrl: bannerImg,
-                      fit: BoxFit.cover,
-                    ),
-
-                    // Gradient Overlay
-                    Container(
-                      decoration: const BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [
-                            Colors.transparent,
-                            Color(0x30000000),
-                            Color(0xDD000000),
-                          ],
-                          stops: [0.0, 0.4, 1.0],
-                        ),
-                      ),
-                    ),
-
-                    // Content
-                    Positioned(
-                      bottom: 16,
-                      left: 16,
-                      right: 16,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.25),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: const [
-                                Text('🎁 ', style: TextStyle(fontSize: 10)),
-                                Text(
-                                  'GIFT',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.bold,
-                                    letterSpacing: 1,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            banner?.title ?? featuredProduct?.name ?? 'Special Curated Gift Box',
-                            style: const TextStyle(
-                              fontFamily: 'Outfit',
-                              fontSize: 18,
-                              fontWeight: FontWeight.w900,
-                              color: Colors.white,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          if (featuredProduct != null && banner == null) ...[
-                            const SizedBox(height: 4),
-                            Text(
-                              '₹${featuredProduct.price.toStringAsFixed(0)}',
-                              style: const TextStyle(
-                                fontFamily: 'Outfit',
-                                fontSize: 15,
-                                fontWeight: FontWeight.w800,
-                                color: Colors.white,
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
-                  ],
+                child: CachedImage(
+                  imageUrl: bannerImg,
+                  fit: BoxFit.cover,
                 ),
               ),
             ),

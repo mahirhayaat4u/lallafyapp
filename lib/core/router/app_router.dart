@@ -19,6 +19,7 @@ import '../../features/profile/profile_screen.dart';
 import '../../features/profile/addresses_screen.dart';
 import '../../features/search/search_screen.dart';
 import '../../features/support/support_screen.dart';
+import '../../features/support/terms_screen.dart';
 import '../widgets/bottom_nav_shell.dart';
 import '../../providers/auth_provider.dart';
 
@@ -88,6 +89,11 @@ GoRouter createRouter(Ref ref) {
         path: '/support',
         name: 'support',
         builder: (context, state) => const SupportScreen(),
+      ),
+      GoRoute(
+        path: '/terms',
+        name: 'terms',
+        builder: (context, state) => const TermsScreen(),
       ),
 
       // ─── Main App Shell (WITH bottom navigation) ─────────────

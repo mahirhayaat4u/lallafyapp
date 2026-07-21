@@ -250,7 +250,10 @@ class HomepageRepository {
     if (category != null && category.isNotEmpty) queryParams['category'] = category;
     if (subCategory != null && subCategory.isNotEmpty) queryParams['subCategory'] = subCategory;
     if (ageGroup != null && ageGroup.isNotEmpty) queryParams['ageGroup'] = ageGroup;
-    if (tag != null && tag.isNotEmpty) queryParams['tag'] = tag;
+    if (tag != null && tag.isNotEmpty) {
+      queryParams['tag'] = tag;
+      if (tag == 'gifting') queryParams['gifting'] = 'true';
+    }
     if (search != null && search.isNotEmpty) queryParams['search'] = search;
     if (occasion != null && occasion.isNotEmpty) queryParams['occasion'] = occasion;
     if (relation != null && relation.isNotEmpty) queryParams['relation'] = relation;

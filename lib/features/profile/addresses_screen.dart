@@ -131,7 +131,13 @@ class _AddressesScreenState extends ConsumerState<AddressesScreen> {
       backgroundColor: AppColors.bg,
       appBar: AppBar(
         leading: IconButton(
-          onPressed: () => context.pop(),
+          onPressed: () {
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.go('/home');
+            }
+          },
           icon: const Icon(Icons.arrow_back_ios_rounded, size: 20),
         ),
         title: const Text('Saved Addresses'),

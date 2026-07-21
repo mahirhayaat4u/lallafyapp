@@ -64,106 +64,108 @@ class CategoriesScreen extends ConsumerWidget {
     final categoriesAsync = ref.watch(categoriesProvider);
     final cart = ref.watch(cartProvider);
 
-    return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
+    return PopScope(
+      canPop: context.canPop(),
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        context.go('/home');
+      },
+      child: Scaffold(
         backgroundColor: Colors.white,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.chevron_left_rounded, color: Color(0xFF1A1C23), size: 28),
-          onPressed: () {
-            if (context.canPop()) {
-              context.pop();
-            } else {
-              context.go('/home');
-            }
-          },
-        ),
-        centerTitle: true,
-        title: Text(
-          'Shop by Category',
-          style: AppTextStyles.h2.copyWith(
-            fontSize: 20,
-            fontWeight: FontWeight.w800,
-            color: const Color(0xFF1A1C23),
+        appBar: AppBar(
+          backgroundColor: Colors.white,
+          elevation: 0,
+          leading: IconButton(
+            icon: const Icon(Icons.chevron_left_rounded, color: Color(0xFF1A1C23), size: 28),
+            onPressed: () {
+              if (context.canPop()) {
+                context.pop();
+              } else {
+                context.go('/home');
+              }
+            },
           ),
-        ),
-        actions: [
-          Stack(
-            clipBehavior: Clip.none,
-            children: [
-              IconButton(
-                icon: const Icon(Icons.shopping_cart_outlined, color: Color(0xFF1A1C23), size: 24),
-                onPressed: () => context.push('/cart'),
-              ),
-              if (cart.totalItems > 0)
-                Positioned(
-                  right: 6,
-                  top: 6,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-                    decoration: const BoxDecoration(
-                      color: Color(0xFFFF448C),
-                      shape: BoxShape.circle,
-                    ),
-                    constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
-                    child: Text(
-                      '${cart.totalItems}',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 9,
-                        fontWeight: FontWeight.bold,
+          centerTitle: true,
+          title: Text(
+            'Shop by Category',
+            style: AppTextStyles.h2.copyWith(
+              fontSize: 20,
+              fontWeight: FontWeight.w800,
+              color: const Color(0xFF1A1C23),
+            ),
+          ),
+          actions: [
+            Stack(
+              clipBehavior: Clip.none,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.shopping_cart_outlined, color: Color(0xFF1A1C23), size: 24),
+                  onPressed: () => context.push('/cart'),
+                ),
+                if (cart.totalItems > 0)
+                  Positioned(
+                    right: 6,
+                    top: 6,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFFF448C),
+                        shape: BoxShape.circle,
                       ),
-                      textAlign: TextAlign.center,
+                      constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                      child: Text(
+                        '${cart.totalItems}',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 9,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
                     ),
                   ),
+              ],
+            ),
+            const SizedBox(width: 8),
+          ],
+        ),
+        body: SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // ── 1. 2x2 Grid of Age Group Cards ──
+              ageGroupsAsync.when(
+                data: (ageGroups) => _buildAgeGroupGrid(context, ageGroups),
+                loading: () => const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(32),
+                    child: CircularProgressIndicator(color: Color(0xFFFF448C)),
+                  ),
                 ),
+                error: (_, __) => const SizedBox.shrink(),
+              ),
+
+              const SizedBox(height: 20),
+
+              // ── 3. Product Categories Grid ──
+              Text(
+                'All Toy Categories',
+                style: AppTextStyles.h2.copyWith(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                  color: const Color(0xFF1A1C23),
+                ),
+              ),
+              const SizedBox(height: 12),
+              categoriesAsync.when(
+                data: (categories) => _buildCategoryGrid(context, categories),
+                loading: () => const SizedBox.shrink(),
+                error: (_, __) => const SizedBox.shrink(),
+              ),
+              const SizedBox(height: 16),
             ],
           ),
-          const SizedBox(width: 8),
-        ],
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // ── 1. 2x2 Grid of Age Group Cards ──
-            ageGroupsAsync.when(
-              data: (ageGroups) => _buildAgeGroupGrid(context, ageGroups),
-              loading: () => const Center(
-                child: Padding(
-                  padding: EdgeInsets.all(32),
-                  child: CircularProgressIndicator(color: Color(0xFFFF448C)),
-                ),
-              ),
-              error: (_, __) => const SizedBox.shrink(),
-            ),
-
-            const SizedBox(height: 20),
-
-            // ── 2. Promo Offer Banner Card ──
-            _buildPromoBanner(context),
-
-            const SizedBox(height: 24),
-
-            // ── 3. Product Categories Grid ──
-            Text(
-              'All Toy Categories',
-              style: AppTextStyles.h2.copyWith(
-                fontSize: 18,
-                fontWeight: FontWeight.w800,
-                color: const Color(0xFF1A1C23),
-              ),
-            ),
-            const SizedBox(height: 12),
-            categoriesAsync.when(
-              data: (categories) => _buildCategoryGrid(context, categories),
-              loading: () => const SizedBox.shrink(),
-              error: (_, __) => const SizedBox.shrink(),
-            ),
-            const SizedBox(height: 16),
-          ],
         ),
       ),
     );
@@ -195,7 +197,7 @@ class CategoriesScreen extends ConsumerWidget {
         final String? imageUrl = group.image ?? (config['image'] as String?);
 
         return GestureDetector(
-          onTap: () => context.push('/shop?ageGroup=${Uri.encodeComponent(group.label)}'),
+          onTap: () => context.go('/shop?ageGroup=${Uri.encodeComponent(group.label)}'),
           child: Container(
             decoration: BoxDecoration(
               color: bgColor,
@@ -289,79 +291,6 @@ class CategoriesScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildPromoBanner(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFFFFF0F5), Color(0xFFF3E5F5)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: const Color(0xFFFCE4EC)),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                RichText(
-                  text: const TextSpan(
-                    style: TextStyle(
-                      fontFamily: 'Outfit',
-                      fontSize: 18,
-                      fontWeight: FontWeight.w800,
-                      color: Color(0xFF1A1C23),
-                    ),
-                    children: [
-                      TextSpan(text: 'Flat '),
-                      TextSpan(
-                        text: '10% OFF',
-                        style: TextStyle(color: Color(0xFFFF448C), fontWeight: FontWeight.w900),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  'on First Order',
-                  style: TextStyle(
-                    fontFamily: 'Outfit',
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.grey.shade700,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFF448C),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: const Text(
-                    'Use Code: LALLAFY10',
-                    style: TextStyle(
-                      fontFamily: 'Outfit',
-                      fontSize: 11,
-                      fontWeight: FontWeight.w900,
-                      color: Colors.white,
-                      letterSpacing: 0.5,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 12),
-          const Text('🎁✨', style: TextStyle(fontSize: 48)),
-        ],
-      ),
-    );
-  }
 
   Widget _buildCategoryGrid(BuildContext context, List<Category> categories) {
     if (categories.isEmpty) return const SizedBox.shrink();
@@ -379,7 +308,7 @@ class CategoriesScreen extends ConsumerWidget {
       itemBuilder: (context, index) {
         final cat = categories[index];
         return GestureDetector(
-          onTap: () => context.push('/shop?category=${cat.slug}'),
+          onTap: () => context.go('/shop?category=${cat.slug}'),
           child: Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(

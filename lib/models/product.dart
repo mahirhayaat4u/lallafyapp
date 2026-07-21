@@ -20,6 +20,7 @@ class Product {
   final bool isGifting;
   final bool isSkillDevelopment;
   final bool isMusical;
+  final bool isGstApplicable;
   final String? bestSellerVideo;
   final int stock;
   final List<String> tags;
@@ -45,6 +46,7 @@ class Product {
     this.isGifting = false,
     this.isSkillDevelopment = false,
     this.isMusical = false,
+    this.isGstApplicable = true,
     this.bestSellerVideo,
     this.stock = 0,
     this.tags = const [],
@@ -115,8 +117,16 @@ class Product {
       isGifting: json['isGifting'] as bool? ?? false,
       isSkillDevelopment: json['isSkillDevelopment'] as bool? ?? false,
       isMusical: json['isMusical'] as bool? ?? false,
-      bestSellerVideo: json['bestSellerVideo'] as String?,
-      stock: json['stock'] as int? ?? 0,
+      bestSellerVideo: (() {
+        final rawVideo = json['bestSellerVideo'] ?? json['videoUrl'] ?? json['video'];
+        if (rawVideo == null) return null;
+        String str = rawVideo.toString().trim();
+        if (str.isEmpty) return null;
+        if (str.startsWith('http://')) {
+          str = str.replaceFirst('http://', 'https://');
+        }
+        return str;
+      })(),
       tags: (json['tags'] as List<dynamic>?)
               ?.map((e) => e.toString())
               .toList() ??

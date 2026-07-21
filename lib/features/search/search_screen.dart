@@ -108,7 +108,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
 
   void _executeSearch(String query) {
     if (query.trim().isEmpty) return;
-    context.push('/shop?search=${Uri.encodeComponent(query.trim())}');
+    context.go('/shop?search=${Uri.encodeComponent(query.trim())}');
   }
 
   @override
@@ -123,7 +123,13 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_rounded, color: AppColors.text),
-          onPressed: () => context.pop(),
+          onPressed: () {
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.go('/home');
+            }
+          },
         ),
         titleSpacing: 0,
         title: Padding(
@@ -388,7 +394,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                     itemBuilder: (context, index) {
                       final category = displayCategories[index];
                       return GestureDetector(
-                        onTap: () => context.push('/shop?category=${category.slug}'),
+                        onTap: () => context.go('/shop?category=${category.slug}'),
                         child: Container(
                           decoration: BoxDecoration(
                             color: AppColors.primary.withValues(alpha: 0.05),

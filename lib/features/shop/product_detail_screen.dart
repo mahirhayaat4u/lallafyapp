@@ -18,6 +18,8 @@ import '../../models/cart_item.dart';
 import '../../models/review.dart';
 import '../../providers/cart_provider.dart';
 import '../../providers/homepage_provider.dart';
+import '../../providers/wishlist_provider.dart';
+import '../../providers/auth_provider.dart';
 import '../home/widgets/product_card.dart';
 
 class ProductDetailState {
@@ -108,7 +110,13 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
           const SizedBox(height: 24),
           AppButton(
             label: 'Back to Shop',
-            onPressed: () => context.pop(),
+            onPressed: () {
+              if (context.canPop()) {
+                context.pop();
+              } else {
+                context.go('/home');
+              }
+            },
           ),
         ],
       ),
@@ -123,7 +131,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
           pinned: true,
           delegate: _StickyHeaderDelegate(
             topPadding: MediaQuery.of(context).padding.top,
-            child: _buildTopHeaderBar(context),
+            child: _buildTopHeaderBar(context, product),
           ),
         ),
 
@@ -198,8 +206,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                     textBaseline: TextBaseline.alphabetic,
                     children: [
                       Text(
-                        Formatters.price(
-                            product.discountPrice ?? product.price),
+                        Formatters.price(product.sellingPrice),
                         style: AppTextStyles.h1.copyWith(
                           fontSize: 28,
                           color: product.hasDiscount
@@ -210,7 +217,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                       if (product.hasDiscount) ...[
                         const SizedBox(width: 12),
                         Text(
-                          Formatters.price(product.price),
+                          Formatters.price(product.originalPrice),
                           style: AppTextStyles.body.copyWith(
                             decoration: TextDecoration.lineThrough,
                             color: AppColors.textMuted,
@@ -434,9 +441,11 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
   }
 
   /// Top Header Bar matching user mockup (Pastel Pink + White Back button + Centered Logo + Wishlist/Cart Badge/Share)
-  Widget _buildTopHeaderBar(BuildContext context) {
+  Widget _buildTopHeaderBar(BuildContext context, Product product) {
     final cartState = ref.watch(cartProvider);
     final itemCount = cartState.totalItems;
+    final wishlist = ref.watch(wishlistProvider);
+    final isWishlisted = wishlist.isWishlisted(product.id);
 
     return Container(
       color: const Color(0xFFFFF2F5),
@@ -448,7 +457,13 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
             children: [
               // Square rounded Back button
               GestureDetector(
-                onTap: () => context.pop(),
+                onTap: () {
+                  if (context.canPop()) {
+                    context.pop();
+                  } else {
+                    context.go('/home');
+                  }
+                },
                 child: Container(
                   width: 40,
                   height: 40,
@@ -501,11 +516,41 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                   // Wishlist Icon
                   IconButton(
                     onPressed: () {
-                      // Wishlist action
+                      final auth = ref.read(authProvider);
+                      if (!auth.isAuthenticated) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Please login to add to wishlist'),
+                            backgroundColor: Colors.orange,
+                          ),
+                        );
+                        context.push('/login');
+                        return;
+                      }
+                      ref.read(wishlistProvider.notifier).toggle(product);
+                      ScaffoldMessenger.of(context).clearSnackBars();
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            isWishlisted
+                                ? '${product.name} removed from wishlist'
+                                : '${product.name} added to wishlist ❤️',
+                          ),
+                          backgroundColor: isWishlisted
+                              ? Colors.grey
+                              : const Color(0xFFFF448C),
+                          duration: const Duration(seconds: 1),
+                          behavior: SnackBarBehavior.floating,
+                        ),
+                      );
                     },
-                    icon: const Icon(
-                      Icons.favorite_border_rounded,
-                      color: Color(0xFF1F2937),
+                    icon: Icon(
+                      isWishlisted
+                          ? Icons.favorite_rounded
+                          : Icons.favorite_border_rounded,
+                      color: isWishlisted
+                          ? const Color(0xFFFF448C)
+                          : const Color(0xFF1F2937),
                       size: 22,
                     ),
                   ),
@@ -676,61 +721,101 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           child: Row(
             children: [
-              // Add to Cart Button (Bright Pink)
+              // Add to Cart / Go to Cart Button
               Expanded(
-                child: ElevatedButton(
-                  onPressed: product.isInStock
-                      ? () {
-                          ref.read(cartProvider.notifier).addItem(
-                                CartItem(
-                                  productId: product.id,
-                                  name: product.name,
-                                  slug: product.slug,
-                                  price: product.price,
-                                  discountPrice: product.discountPrice,
-                                  imageUrl: product.primaryImage,
-                                  storeName: product.storeName ?? 'Lallafy',
-                                  stock: product.stock,
-                                  quantity: _qty,
+                child: Builder(
+                  builder: (context) {
+                    final cart = ref.watch(cartProvider);
+                    final isInCart = cart.items.any((i) => i.productId == product.id);
+
+                    if (isInCart) {
+                      // Go to Cart Button (Green)
+                      return ElevatedButton(
+                        onPressed: () => context.push('/cart'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF2E7D32),
+                          foregroundColor: Colors.white,
+                          elevation: 0,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(25),
+                          ),
+                        ),
+                        child: const Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.shopping_cart, size: 18),
+                            SizedBox(width: 6),
+                            Text(
+                              'Go to Cart',
+                              style: TextStyle(
+                                fontFamily: 'Outfit',
+                                fontSize: 14,
+                                fontWeight: FontWeight.w800,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }
+
+                    // Add to Cart Button (Pink)
+                    return ElevatedButton(
+                      onPressed: product.isInStock
+                          ? () {
+                              ref.read(cartProvider.notifier).addItem(
+                                    CartItem(
+                                      productId: product.id,
+                                      name: product.name,
+                                      slug: product.slug,
+                                      price: product.originalPrice,
+                                      discountPrice: product.sellingPrice,
+                                      imageUrl: product.primaryImage,
+                                      storeName: product.storeName ?? 'Lallafy',
+                                      stock: product.stock,
+                                      quantity: _qty,
+                                    ),
+                                  );
+                              ScaffoldMessenger.of(context).clearSnackBars();
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('${product.name} added to cart! 🛒'),
+                                  backgroundColor: const Color(0xFFFF448C),
+                                  duration: const Duration(seconds: 1),
+                                  behavior: SnackBarBehavior.floating,
                                 ),
                               );
-                          ScaffoldMessenger.of(context).clearSnackBars();
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text('${product.name} added to cart! 🛒'),
-                              backgroundColor: const Color(0xFFFF448C),
-                              duration: const Duration(seconds: 1),
-                              behavior: SnackBarBehavior.floating,
-                            ),
-                          );
-                        }
-                      : null,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFFF448C),
-                    disabledBackgroundColor: Colors.grey.shade300,
-                    foregroundColor: Colors.white,
-                    elevation: 0,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(25),
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(Icons.shopping_cart_outlined, size: 18),
-                      const SizedBox(width: 6),
-                      Text(
-                        product.isInStock ? 'Add to Cart' : 'Out of Stock',
-                        style: const TextStyle(
-                          fontFamily: 'Outfit',
-                          fontSize: 14,
-                          fontWeight: FontWeight.w800,
-                          color: Colors.white,
+                            }
+                          : null,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFFF448C),
+                        disabledBackgroundColor: Colors.grey.shade300,
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(25),
                         ),
                       ),
-                    ],
-                  ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.shopping_cart_outlined, size: 18),
+                          const SizedBox(width: 6),
+                          Text(
+                            product.isInStock ? 'Add to Cart' : 'Out of Stock',
+                            style: const TextStyle(
+                              fontFamily: 'Outfit',
+                              fontSize: 14,
+                              fontWeight: FontWeight.w800,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
                 ),
               ),
 
@@ -746,8 +831,8 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                               productId: product.id,
                               name: product.name,
                               slug: product.slug,
-                              price: product.price,
-                              discountPrice: product.discountPrice,
+                              price: product.originalPrice,
+                              discountPrice: product.sellingPrice,
                               imageUrl: product.primaryImage,
                               storeName: product.storeName ?? 'Lallafy',
                               stock: product.stock,

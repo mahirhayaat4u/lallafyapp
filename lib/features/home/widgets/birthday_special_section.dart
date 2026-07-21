@@ -118,7 +118,7 @@ class BirthdaySpecialSection extends ConsumerWidget {
     final hasImage = cat.imageUrl != null && cat.imageUrl!.isNotEmpty;
 
     return GestureDetector(
-      onTap: () => context.push('/shop?category=${cat.id}'),
+      onTap: () => context.go('/shop?category=${cat.id}'),
       child: Container(
         width: 145,
         height: 200,

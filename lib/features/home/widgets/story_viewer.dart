@@ -263,7 +263,7 @@ class _StoryViewerState extends State<StoryViewer>
                       GestureDetector(
                         onTap: () {
                           Navigator.of(context).pop();
-                          context.push('/shop');
+                          context.go('/shop');
                         },
                         child: Container(
                           padding: const EdgeInsets.symmetric(

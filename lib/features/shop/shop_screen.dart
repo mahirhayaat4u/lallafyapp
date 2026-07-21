@@ -107,7 +107,10 @@ final shopProductsProvider = FutureProvider<List<Product>>((ref) {
   final repo = ref.read(homepageRepositoryProvider);
   // Map app sort values to backend enum values
   String? sortValue = filters.sort;
-  if (sortValue == 'popular') sortValue = 'popularity';
+  if (sortValue == 'price_asc') sortValue = 'price_low';
+  if (sortValue == 'price_desc') sortValue = 'price_high';
+  if (sortValue == 'popular') sortValue = 'trending';
+  if (sortValue == 'rating') sortValue = '-averageRating';
   return repo.fetchProducts(
     category: filters.category,
     subCategory: filters.subCategory,
@@ -163,42 +166,23 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
   @override
   void initState() {
     super.initState();
-    // Apply initial filters from route parameters
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (widget.initialCategory != null ||
-          widget.initialSubCategory != null ||
-          widget.initialAgeGroup != null ||
-          widget.initialSearch != null ||
-          widget.initialTag != null ||
-          widget.initialOccasion != null ||
-          widget.initialRelation != null ||
-          widget.initialSort != null ||
-          widget.initialIds != null ||
-          widget.initialTitle != null ||
-          widget.initialMinPrice != null ||
-          widget.initialMaxPrice != null) {
-        ref.read(shopFiltersProvider.notifier).state = ShopFilters(
-          category: widget.initialCategory,
-          subCategory: widget.initialSubCategory,
-          ageGroup: widget.initialAgeGroup,
-          search: widget.initialSearch,
-          tag: widget.initialTag,
-          occasion: widget.initialOccasion,
-          relation: widget.initialRelation,
-          ids: widget.initialIds,
-          title: widget.initialTitle,
-          minPrice: widget.initialMinPrice,
-          maxPrice: widget.initialMaxPrice,
-          sort: widget.initialSort ?? 'newest',
-        );
-      }
+    Future.microtask(() {
+      if (mounted) _applyInitialFilters();
     });
   }
 
   @override
   void didUpdateWidget(ShopScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.initialCategory != oldWidget.initialCategory ||
+    if (_hasFilterChanged(oldWidget)) {
+      Future.microtask(() {
+        if (mounted) _applyInitialFilters();
+      });
+    }
+  }
+
+  bool _hasFilterChanged(ShopScreen oldWidget) {
+    return widget.initialCategory != oldWidget.initialCategory ||
         widget.initialSubCategory != oldWidget.initialSubCategory ||
         widget.initialAgeGroup != oldWidget.initialAgeGroup ||
         widget.initialSearch != oldWidget.initialSearch ||
@@ -209,7 +193,22 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
         widget.initialIds != oldWidget.initialIds ||
         widget.initialTitle != oldWidget.initialTitle ||
         widget.initialMinPrice != oldWidget.initialMinPrice ||
-        widget.initialMaxPrice != oldWidget.initialMaxPrice) {
+        widget.initialMaxPrice != oldWidget.initialMaxPrice;
+  }
+
+  void _applyInitialFilters() {
+    if (widget.initialCategory != null ||
+        widget.initialSubCategory != null ||
+        widget.initialAgeGroup != null ||
+        widget.initialSearch != null ||
+        widget.initialTag != null ||
+        widget.initialOccasion != null ||
+        widget.initialRelation != null ||
+        widget.initialSort != null ||
+        widget.initialIds != null ||
+        widget.initialTitle != null ||
+        widget.initialMinPrice != null ||
+        widget.initialMaxPrice != null) {
       ref.read(shopFiltersProvider.notifier).state = ShopFilters(
         category: widget.initialCategory,
         subCategory: widget.initialSubCategory,
@@ -267,16 +266,22 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
   String _getCategoryLabel(String? slug, List<Category> categories) {
     if (slug == null) return 'Category';
     try {
-      final parent = categories.firstWhere((c) => c.slug == slug, orElse: () => Category(id: '', name: '', slug: ''));
-      if (parent.name.isNotEmpty) return parent.name;
+      // Match by slug
+      final bySlug = categories.firstWhere((c) => c.slug == slug, orElse: () => Category(id: '', name: '', slug: ''));
+      if (bySlug.name.isNotEmpty) return bySlug.name;
+
+      // Match by ID (some sections pass categoryId instead of slug)
+      final byId = categories.firstWhere((c) => c.id == slug, orElse: () => Category(id: '', name: '', slug: ''));
+      if (byId.name.isNotEmpty) return byId.name;
       
+      // Check subcategories
       for (final cat in categories) {
         if (cat.children != null) {
-          final child = cat.children!.firstWhere((c) => c.slug == slug, orElse: () => Category(id: '', name: '', slug: ''));
+          final child = cat.children!.firstWhere((c) => c.slug == slug || c.id == slug, orElse: () => Category(id: '', name: '', slug: ''));
           if (child.name.isNotEmpty) return child.name;
         }
       }
-      return slug;
+      return 'Shop';
     } catch (_) {
       return 'Category';
     }
@@ -631,214 +636,238 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
     final categoriesAsync = ref.watch(categoriesProvider);
     final cartItems = ref.watch(cartProvider).totalItems;
 
-    return Scaffold(
-      backgroundColor: AppColors.bg,
-      appBar: AppBar(
-        leading: IconButton(
-          onPressed: () {
-            if (context.canPop()) {
-              context.pop();
-            } else {
-              context.go('/home');
-            }
-          },
-          icon: const Icon(Icons.arrow_back_ios_rounded, size: 20),
-        ),
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              _getShopTitle(filters, categoriesAsync.valueOrNull ?? []),
-              style: AppTextStyles.h3.copyWith(fontWeight: FontWeight.bold),
+    return PopScope(
+      canPop: context.canPop(),
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        context.go('/home');
+      },
+      child: Scaffold(
+        backgroundColor: AppColors.bg,
+        appBar: AppBar(
+          leading: IconButton(
+            onPressed: () {
+              if (context.canPop()) {
+                context.pop();
+              } else {
+                context.go('/home');
+              }
+            },
+            icon: const Icon(Icons.arrow_back_ios_rounded, size: 20),
+          ),
+          title: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                _getShopTitle(filters, categoriesAsync.valueOrNull ?? []),
+                style: AppTextStyles.h3.copyWith(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 2),
+              productsAsync.when(
+                data: (products) => Text(
+                  '${products.length} items',
+                  style: AppTextStyles.bodyXs.copyWith(color: AppColors.textMuted),
+                ),
+                loading: () => Text(
+                  'Loading...',
+                  style: AppTextStyles.bodyXs.copyWith(color: AppColors.textMuted),
+                ),
+                error: (_, __) => Text(
+                  'Error',
+                  style: AppTextStyles.bodyXs.copyWith(color: AppColors.textMuted),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.search_rounded, size: 26),
+              onPressed: () => context.push('/search'),
             ),
-            const SizedBox(height: 2),
-            productsAsync.when(
-              data: (products) => Text(
-                '${products.length} items',
-                style: AppTextStyles.bodyXs.copyWith(color: AppColors.textMuted),
+            Stack(
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.shopping_cart_outlined, size: 26),
+                  onPressed: () => context.go('/cart'),
+                ),
+                if (cartItems > 0)
+                  Positioned(
+                    right: 6,
+                    top: 6,
+                    child: Container(
+                      padding: const EdgeInsets.all(3),
+                      decoration: const BoxDecoration(
+                        color: AppColors.primary,
+                        shape: BoxShape.circle,
+                      ),
+                      constraints: const BoxConstraints(
+                        minWidth: 16,
+                        minHeight: 16,
+                      ),
+                      child: Text(
+                        '$cartItems',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 9,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(width: 8),
+          ],
+          centerTitle: false,
+        ),
+        body: Column(
+          children: [
+            // ── Horizontal Filter Row ──
+            _buildFilterRow(context, filters, categoriesAsync.valueOrNull ?? []),
+
+            // ── Active filter chips ──
+            if (filters.category != null ||
+                filters.sort != 'newest' ||
+                filters.tag != null ||
+                filters.ageGroup != null ||
+                filters.occasion != null ||
+                filters.relation != null ||
+                filters.ids != null ||
+                filters.search != null ||
+                filters.minPrice != null ||
+                filters.maxPrice != null)
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                child: Row(
+                  children: [
+                    if (filters.category != null)
+                      _FilterChip(
+                        label: _getCategoryLabel(filters.category, categoriesAsync.valueOrNull ?? []),
+                        onRemove: () {
+                          ref.read(shopFiltersProvider.notifier).state =
+                              filters.copyWith(clearCategory: true, page: 1);
+                        },
+                      ),
+                    if (filters.search != null)
+                      _FilterChip(
+                        label: 'Search: ${filters.search}',
+                        onRemove: () {
+                          ref.read(shopFiltersProvider.notifier).state =
+                              filters.copyWith(clearSearch: true, page: 1);
+                        },
+                      ),
+                    if (filters.tag != null)
+                      _FilterChip(
+                        label: 'Tag: ${filters.tag}',
+                        onRemove: () {
+                          ref.read(shopFiltersProvider.notifier).state =
+                              filters.copyWith(clearTag: true, page: 1);
+                        },
+                      ),
+                    if (filters.ageGroup != null)
+                      _FilterChip(
+                        label: 'Age: ${filters.ageGroup}',
+                        onRemove: () {
+                          ref.read(shopFiltersProvider.notifier).state =
+                              filters.copyWith(clearAgeGroup: true, page: 1);
+                        },
+                      ),
+                    if (filters.minPrice != null || filters.maxPrice != null)
+                      _FilterChip(
+                        label: '₹${filters.minPrice?.round() ?? 0} – ₹${filters.maxPrice?.round() ?? '10,000+'}',
+                        onRemove: () {
+                          ref.read(shopFiltersProvider.notifier).state =
+                              filters.copyWith(clearPrice: true, page: 1);
+                        },
+                      ),
+                    if (filters.occasion != null)
+                      _FilterChip(
+                        label: 'Occasion: ${filters.occasion}',
+                        onRemove: () {
+                          ref.read(shopFiltersProvider.notifier).state =
+                              filters.copyWith(clearOccasion: true, page: 1);
+                        },
+                      ),
+                    if (filters.relation != null)
+                      _FilterChip(
+                        label: 'Relation: ${filters.relation}',
+                        onRemove: () {
+                          ref.read(shopFiltersProvider.notifier).state =
+                              filters.copyWith(clearRelation: true, page: 1);
+                        },
+                      ),
+                    if (filters.ids != null)
+                      _FilterChip(
+                        label: filters.title ?? 'Selected Items',
+                        onRemove: () {
+                          ref.read(shopFiltersProvider.notifier).state =
+                              filters.copyWith(clearIds: true, clearTitle: true, page: 1);
+                        },
+                      ),
+                    if (filters.sort != 'newest')
+                      _FilterChip(
+                        label: _getSortLabel(filters.sort),
+                        onRemove: () {
+                          ref.read(shopFiltersProvider.notifier).state =
+                              filters.copyWith(sort: 'newest', page: 1);
+                        },
+                      ),
+                  ],
+                ),
               ),
-              loading: () => Text(
-                'Loading...',
-                style: AppTextStyles.bodyXs.copyWith(color: AppColors.textMuted),
-              ),
-              error: (_, __) => Text(
-                'Error',
-                style: AppTextStyles.bodyXs.copyWith(color: AppColors.textMuted),
+
+            // ── Products Grid ──
+            Expanded(
+              child: productsAsync.when(
+                data: (products) {
+                  if (products.isEmpty) {
+                    return widgets.EmptyStateWidget(
+                      icon: Icons.shopping_bag_outlined,
+                      title: 'No products found',
+                      message: 'Try adjusting your filters or search',
+                      actionLabel: 'Clear Filters',
+                      onAction: () {
+                        ref.read(shopFiltersProvider.notifier).state =
+                            const ShopFilters();
+                      },
+                    );
+                  }
+                  return GridView.builder(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 4),
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 2,
+                      childAspectRatio: 0.66,
+                      crossAxisSpacing: 12,
+                      mainAxisSpacing: 12,
+                    ),
+                    itemCount: products.length,
+                    itemBuilder: (context, index) => ProductCard(
+                      product: products[index],
+                      width: double.infinity,
+                      onTap: () {
+                        context.push('/product/${products[index].id}');
+                      },
+                    ),
+                  );
+                },
+                loading: () =>
+                    const LoadingWidget(message: 'Finding gifts...'),
+                error: (err, _) => Center(
+                  child: Text(
+                    err.toString(),
+                    style: AppTextStyles.bodySm
+                        .copyWith(color: AppColors.danger),
+                  ),
+                ),
               ),
             ),
           ],
         ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.search_rounded, size: 26),
-            onPressed: () => context.push('/search'),
-          ),
-          Stack(
-            children: [
-              IconButton(
-                icon: const Icon(Icons.shopping_cart_outlined, size: 26),
-                onPressed: () => context.go('/cart'),
-              ),
-              if (cartItems > 0)
-                Positioned(
-                  right: 6,
-                  top: 6,
-                  child: Container(
-                    padding: const EdgeInsets.all(3),
-                    decoration: const BoxDecoration(
-                      color: AppColors.primary,
-                      shape: BoxShape.circle,
-                    ),
-                    constraints: const BoxConstraints(
-                      minWidth: 16,
-                      minHeight: 16,
-                    ),
-                    child: Text(
-                      '$cartItems',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 9,
-                        fontWeight: FontWeight.bold,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                ),
-            ],
-          ),
-          const SizedBox(width: 8),
-        ],
-        centerTitle: false,
-      ),
-      body: Column(
-        children: [
-          // ── Horizontal Filter Row ──
-          _buildFilterRow(context, filters, categoriesAsync.valueOrNull ?? []),
-
-          // ── Active filter chips ──
-          if (filters.category != null ||
-              filters.sort != 'newest' ||
-              filters.tag != null ||
-              filters.occasion != null ||
-              filters.relation != null ||
-              filters.ids != null ||
-              filters.search != null)
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-              child: Row(
-                children: [
-                  if (filters.category != null)
-                    _FilterChip(
-                      label: _getCategoryLabel(filters.category, categoriesAsync.valueOrNull ?? []),
-                      onRemove: () {
-                        ref.read(shopFiltersProvider.notifier).state =
-                            filters.copyWith(clearCategory: true, page: 1);
-                      },
-                    ),
-                  if (filters.search != null)
-                    _FilterChip(
-                      label: 'Search: ${filters.search}',
-                      onRemove: () {
-                        ref.read(shopFiltersProvider.notifier).state =
-                            filters.copyWith(clearSearch: true, page: 1);
-                      },
-                    ),
-                  if (filters.tag != null)
-                    _FilterChip(
-                      label: 'Tag: ${filters.tag}',
-                      onRemove: () {
-                        ref.read(shopFiltersProvider.notifier).state =
-                            filters.copyWith(clearTag: true, page: 1);
-                      },
-                    ),
-                  if (filters.occasion != null)
-                    _FilterChip(
-                      label: 'Occasion: ${filters.occasion}',
-                      onRemove: () {
-                        ref.read(shopFiltersProvider.notifier).state =
-                            filters.copyWith(clearOccasion: true, page: 1);
-                      },
-                    ),
-                  if (filters.relation != null)
-                    _FilterChip(
-                      label: 'Relation: ${filters.relation}',
-                      onRemove: () {
-                        ref.read(shopFiltersProvider.notifier).state =
-                            filters.copyWith(clearRelation: true, page: 1);
-                      },
-                    ),
-                  if (filters.ids != null)
-                    _FilterChip(
-                      label: filters.title ?? 'Selected Items',
-                      onRemove: () {
-                        ref.read(shopFiltersProvider.notifier).state =
-                            filters.copyWith(clearIds: true, clearTitle: true, page: 1);
-                      },
-                    ),
-                  if (filters.sort != 'newest')
-                    _FilterChip(
-                      label: _sortOptions
-                          .firstWhere((s) => s.$1 == filters.sort)
-                          .$2,
-                      onRemove: () {
-                        ref.read(shopFiltersProvider.notifier).state =
-                            filters.copyWith(sort: 'newest', page: 1);
-                      },
-                    ),
-                ],
-              ),
-            ),
-
-          // ── Products Grid ──
-          Expanded(
-            child: productsAsync.when(
-              data: (products) {
-                if (products.isEmpty) {
-                  return widgets.EmptyStateWidget(
-                    icon: Icons.shopping_bag_outlined,
-                    title: 'No products found',
-                    message: 'Try adjusting your filters or search',
-                    actionLabel: 'Clear Filters',
-                    onAction: () {
-                      ref.read(shopFiltersProvider.notifier).state =
-                          const ShopFilters();
-                    },
-                  );
-                }
-                return GridView.builder(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 16, vertical: 4),
-                  gridDelegate:
-                      const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2,
-                    childAspectRatio: 0.66,
-                    crossAxisSpacing: 12,
-                    mainAxisSpacing: 12,
-                  ),
-                  itemCount: products.length,
-                  itemBuilder: (context, index) => ProductCard(
-                    product: products[index],
-                    width: double.infinity,
-                    onTap: () {
-                      context.push('/product/${products[index].id}');
-                    },
-                  ),
-                );
-              },
-              loading: () =>
-                  const LoadingWidget(message: 'Finding gifts...'),
-              error: (err, _) => Center(
-                child: Text(
-                  err.toString(),
-                  style: AppTextStyles.bodySm
-                      .copyWith(color: AppColors.danger),
-                ),
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -903,22 +932,51 @@ class _FilterSheet extends StatefulWidget {
 class _FilterSheetState extends State<_FilterSheet> {
   late String _sort;
   late String? _category;
+  late String? _ageGroup;
+  late String? _tag;
+  late double? _minPrice;
+  late double? _maxPrice;
+  late RangeValues _priceRange;
   bool _clearAll = false;
+
+  // Available tags
+  static const _tags = [
+    ('trending', '🔥 Trending'),
+    ('best-seller', '⭐ Best Seller'),
+    ('gifting', '🎁 Gifting'),
+    ('new-arrival', '✨ New Arrival'),
+    ('featured', '💎 Featured'),
+  ];
+
+  // Age groups
+  static const _ageGroups = [
+    ('0–1 Years', '👶 0–1 Years'),
+    ('1–3 Years', '🧒 1–3 Years'),
+    ('4–12 Years', '🧸 4–12 Years'),
+    ('13+ Years', '🧑 13+ Years'),
+  ];
 
   @override
   void initState() {
     super.initState();
     _sort = widget.filters.sort;
     _category = widget.filters.category;
-    _clearAll = false;
+    _ageGroup = widget.filters.ageGroup;
+    _tag = widget.filters.tag;
+    _minPrice = widget.filters.minPrice;
+    _maxPrice = widget.filters.maxPrice;
+    _priceRange = RangeValues(
+      widget.filters.minPrice ?? 0,
+      widget.filters.maxPrice ?? 10000,
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return DraggableScrollableSheet(
-      initialChildSize: 0.7,
-      maxChildSize: 0.9,
-      minChildSize: 0.4,
+      initialChildSize: 0.85,
+      maxChildSize: 0.95,
+      minChildSize: 0.5,
       expand: false,
       builder: (context, scrollController) => Column(
         children: [
@@ -943,6 +1001,11 @@ class _FilterSheetState extends State<_FilterSheet> {
                     setState(() {
                       _sort = 'newest';
                       _category = null;
+                      _ageGroup = null;
+                      _tag = null;
+                      _minPrice = null;
+                      _maxPrice = null;
+                      _priceRange = const RangeValues(0, 10000);
                       _clearAll = true;
                     });
                   },
@@ -963,58 +1026,154 @@ class _FilterSheetState extends State<_FilterSheet> {
               controller: scrollController,
               padding: const EdgeInsets.all(20),
               children: [
-                // Sort section
-                Text('Sort By', style: AppTextStyles.h4),
+                // ── Sort By ──
+                _sectionTitle('Sort By'),
                 const SizedBox(height: 12),
                 Wrap(
                   spacing: 8,
                   runSpacing: 8,
                   children: _sortOptions.map((s) {
                     final isSelected = _sort == s.$1;
-                    return GestureDetector(
+                    return _buildChip(
+                      label: s.$2,
+                      isSelected: isSelected,
                       onTap: () => setState(() => _sort = s.$1),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 10),
-                        decoration: BoxDecoration(
-                          color: isSelected
-                              ? AppColors.primary
-                              : AppColors.bgSurface,
-                          borderRadius:
-                              BorderRadius.circular(AppTheme.radiusFull),
-                          border: Border.all(
-                            color: isSelected
-                                ? AppColors.primary
-                                : AppColors.border,
-                          ),
-                        ),
-                        child: Text(
-                          s.$2,
-                          style: AppTextStyles.bodyXs.copyWith(
-                            color: isSelected ? Colors.white : AppColors.text,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
                     );
                   }).toList(),
                 ),
-                const SizedBox(height: 28),
+                const SizedBox(height: 24),
 
-                // Category section
+                // ── Category ──
                 if (widget.categories.isNotEmpty) ...[
-                  Text('Category', style: AppTextStyles.h4),
+                  _sectionTitle('Category'),
                   const SizedBox(height: 12),
                   Wrap(
                     spacing: 8,
                     runSpacing: 8,
                     children: [
-                      _categoryChip('All', null),
-                      ...widget.categories
-                          .map((c) => _categoryChip(c.name, c.slug)),
+                      _buildChip(
+                        label: 'All',
+                        isSelected: _category == null,
+                        onTap: () => setState(() => _category = null),
+                      ),
+                      ...widget.categories.map((c) => _buildChip(
+                            label: c.name,
+                            isSelected: _category == c.slug,
+                            onTap: () =>
+                                setState(() => _category = c.slug),
+                          )),
                     ],
                   ),
+                  const SizedBox(height: 24),
                 ],
+
+                // ── Tags (Trending, Gifting, Best Seller, etc.) ──
+                _sectionTitle('Collections'),
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    _buildChip(
+                      label: '🏷️ All',
+                      isSelected: _tag == null,
+                      onTap: () => setState(() => _tag = null),
+                    ),
+                    ..._tags.map((t) => _buildChip(
+                          label: t.$2,
+                          isSelected: _tag == t.$1,
+                          onTap: () => setState(() =>
+                              _tag = _tag == t.$1 ? null : t.$1),
+                        )),
+                  ],
+                ),
+                const SizedBox(height: 24),
+
+                // ── Age Group ──
+                _sectionTitle('Age Group'),
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    _buildChip(
+                      label: '📦 All Ages',
+                      isSelected: _ageGroup == null,
+                      onTap: () => setState(() => _ageGroup = null),
+                    ),
+                    ..._ageGroups.map((a) => _buildChip(
+                          label: a.$2,
+                          isSelected: _ageGroup == a.$1,
+                          onTap: () => setState(() =>
+                              _ageGroup = _ageGroup == a.$1 ? null : a.$1),
+                        )),
+                  ],
+                ),
+                const SizedBox(height: 24),
+
+                // ── Price Range ──
+                _sectionTitle('Price Range'),
+                const SizedBox(height: 8),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      '₹${_priceRange.start.round()}',
+                      style: AppTextStyles.bodySm.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                    Text(
+                      _priceRange.end >= 10000
+                          ? '₹10,000+'
+                          : '₹${_priceRange.end.round()}',
+                      style: AppTextStyles.bodySm.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                  ],
+                ),
+                SliderTheme(
+                  data: SliderThemeData(
+                    activeTrackColor: AppColors.primary,
+                    inactiveTrackColor: AppColors.border,
+                    thumbColor: AppColors.primary,
+                    overlayColor: AppColors.primary.withOpacity(0.15),
+                    rangeThumbShape: const RoundRangeSliderThumbShape(
+                      enabledThumbRadius: 8,
+                    ),
+                    rangeTrackShape: const RoundedRectRangeSliderTrackShape(),
+                  ),
+                  child: RangeSlider(
+                    values: _priceRange,
+                    min: 0,
+                    max: 10000,
+                    divisions: 100,
+                    onChanged: (values) {
+                      setState(() {
+                        _priceRange = values;
+                        _minPrice =
+                            values.start > 0 ? values.start : null;
+                        _maxPrice =
+                            values.end < 10000 ? values.end : null;
+                      });
+                    },
+                  ),
+                ),
+                // Quick price buttons
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    _buildPriceQuick('Under ₹500', 0, 500),
+                    _buildPriceQuick('₹500–₹1000', 500, 1000),
+                    _buildPriceQuick('₹1000–₹2000', 1000, 2000),
+                    _buildPriceQuick('₹2000+', 2000, 10000),
+                  ],
+                ),
+                const SizedBox(height: 20),
               ],
             ),
           ),
@@ -1027,16 +1186,27 @@ class _FilterSheetState extends State<_FilterSheet> {
               height: 52,
               child: ElevatedButton(
                 onPressed: () {
-                  widget.onApply(
-                    _clearAll
-                        ? ShopFilters(sort: _sort, category: _category)
-                        : widget.filters.copyWith(
-                            sort: _sort,
-                            category: _category,
-                            clearCategory: _category == null,
-                            page: 1,
-                          ),
-                  );
+                  if (_clearAll) {
+                    widget.onApply(ShopFilters(
+                      sort: _sort,
+                      category: _category,
+                    ));
+                  } else {
+                    widget.onApply(widget.filters.copyWith(
+                      sort: _sort,
+                      category: _category,
+                      clearCategory: _category == null,
+                      ageGroup: _ageGroup,
+                      clearAgeGroup: _ageGroup == null,
+                      tag: _tag,
+                      clearTag: _tag == null,
+                      minPrice: _minPrice,
+                      maxPrice: _maxPrice,
+                      clearPrice:
+                          _minPrice == null && _maxPrice == null,
+                      page: 1,
+                    ));
+                  }
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,
@@ -1061,16 +1231,23 @@ class _FilterSheetState extends State<_FilterSheet> {
     );
   }
 
-  Widget _categoryChip(String label, String? slug) {
-    final isSelected = _category == slug;
+  Widget _sectionTitle(String title) {
+    return Text(title, style: AppTextStyles.h4);
+  }
+
+  Widget _buildChip({
+    required String label,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
     return GestureDetector(
-      onTap: () => setState(() => _category = slug),
-      child: Container(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
         padding:
             const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         decoration: BoxDecoration(
-          color:
-              isSelected ? AppColors.primary : AppColors.bgSurface,
+          color: isSelected ? AppColors.primary : AppColors.bgSurface,
           borderRadius: BorderRadius.circular(AppTheme.radiusFull),
           border: Border.all(
             color: isSelected ? AppColors.primary : AppColors.border,
@@ -1080,6 +1257,40 @@ class _FilterSheetState extends State<_FilterSheet> {
           label,
           style: AppTextStyles.bodyXs.copyWith(
             color: isSelected ? Colors.white : AppColors.text,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPriceQuick(String label, double min, double max) {
+    final isSelected =
+        _priceRange.start == min && _priceRange.end == max;
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _priceRange = RangeValues(min, max);
+          _minPrice = min > 0 ? min : null;
+          _maxPrice = max < 10000 ? max : null;
+        });
+      },
+      child: Container(
+        padding:
+            const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? AppColors.primary.withOpacity(0.1)
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(AppTheme.radiusFull),
+          border: Border.all(
+            color: isSelected ? AppColors.primary : AppColors.border,
+          ),
+        ),
+        child: Text(
+          label,
+          style: AppTextStyles.bodyXs.copyWith(
+            color: isSelected ? AppColors.primary : AppColors.textMuted,
             fontWeight: FontWeight.w600,
           ),
         ),

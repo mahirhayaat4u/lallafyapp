@@ -10,6 +10,7 @@ import '../../core/widgets/cached_image.dart';
 import '../../core/widgets/app_button.dart';
 import '../../providers/cart_provider.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/gst_provider.dart';
 
 /// Cart Screen — mirrors CartPage.tsx
 ///
@@ -22,30 +23,47 @@ class CartScreen extends ConsumerWidget {
     final cart = ref.watch(cartProvider);
     final auth = ref.watch(authProvider);
 
-    return Scaffold(
-      backgroundColor: AppColors.bg,
-      appBar: AppBar(
-        automaticallyImplyLeading: false,
-        title: Text('Cart (${cart.totalItems})'),
-        actions: [
-          if (!cart.isEmpty)
-            TextButton(
-              onPressed: () {
-                ref.read(cartProvider.notifier).clearCart();
-              },
-              child: Text(
-                '🗑️ Clear',
-                style: AppTextStyles.bodyXs.copyWith(
-                  color: AppColors.danger,
-                  fontWeight: FontWeight.w600,
+    return PopScope(
+      canPop: context.canPop(),
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        context.go('/home');
+      },
+      child: Scaffold(
+        backgroundColor: AppColors.bg,
+        appBar: AppBar(
+          automaticallyImplyLeading: false,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_rounded),
+            onPressed: () {
+              if (context.canPop()) {
+                context.pop();
+              } else {
+                context.go('/home');
+              }
+            },
+          ),
+          title: Text('Cart (${cart.totalItems})'),
+          actions: [
+            if (!cart.isEmpty)
+              TextButton(
+                onPressed: () {
+                  ref.read(cartProvider.notifier).clearCart();
+                },
+                child: Text(
+                  '🗑️ Clear',
+                  style: AppTextStyles.bodyXs.copyWith(
+                    color: AppColors.danger,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
-            ),
-        ],
+          ],
+        ),
+        body: cart.isEmpty
+            ? _buildEmptyCart(context)
+            : _buildCartContent(context, ref, cart, auth),
       ),
-      body: cart.isEmpty
-          ? _buildEmptyCart(context)
-          : _buildCartContent(context, ref, cart, auth),
     );
   }
 
@@ -69,7 +87,7 @@ class CartScreen extends ConsumerWidget {
             const SizedBox(height: 24),
             AppButton(
               label: 'Start Shopping',
-              onPressed: () => context.push('/shop'),
+              onPressed: () => context.go('/shop'),
             ),
           ],
         ),
@@ -120,7 +138,7 @@ class CartScreen extends ConsumerWidget {
               context.push('/login');
             }
           },
-          onContinueShopping: () => context.push('/shop'),
+          onContinueShopping: () => context.go('/shop'),
         ),
       ],
     );
@@ -375,7 +393,7 @@ class _QtyStepperSmall extends StatelessWidget {
 }
 
 /// Order summary pinned at bottom
-class _OrderSummary extends StatelessWidget {
+class _OrderSummary extends ConsumerWidget {
   final CartState cart;
   final bool isLoggedIn;
   final VoidCallback onCheckout;
@@ -389,7 +407,12 @@ class _OrderSummary extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final gstAsync = ref.watch(gstSettingProvider);
+    final gstSetting = gstAsync.valueOrNull ?? const GstSetting(percentage: 18.0, isIncluded: true);
+    final gstAmount = cart.subtotal * (gstSetting.percentage / 100);
+    final displayTotal = cart.subtotal + cart.shipping + gstAmount;
+
     return Container(
       padding: EdgeInsets.fromLTRB(
           20, 16, 20, MediaQuery.of(context).padding.bottom + 16),
@@ -411,6 +434,13 @@ class _OrderSummary extends StatelessWidget {
           _summaryRow(
               'Subtotal (${cart.totalItems} items)',
               Formatters.price(cart.subtotal)),
+          const SizedBox(height: 6),
+          // GST
+          _summaryRow(
+            'GST (${gstSetting.percentage.toStringAsFixed(0)}%)',
+            '+${Formatters.price(gstAmount)}',
+            valueColor: const Color(0xFF10B981),
+          ),
           const SizedBox(height: 6),
           // Shipping
           _summaryRow(
@@ -441,12 +471,34 @@ class _OrderSummary extends StatelessWidget {
           // Total
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Text('Total',
-                  style:
-                      AppTextStyles.h4.copyWith(fontWeight: FontWeight.w800)),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Total',
+                      style:
+                          AppTextStyles.h4.copyWith(fontWeight: FontWeight.w800)),
+                  const SizedBox(height: 2),
+                  Row(
+                    children: [
+                      const Icon(Icons.check_circle_rounded, size: 12, color: Color(0xFF10B981)),
+                      const SizedBox(width: 4),
+                      Text(
+                        '+ ${gstSetting.percentage.toStringAsFixed(0)}% GST Applied',
+                        style: const TextStyle(
+                          fontFamily: 'Outfit',
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF10B981),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
               Text(
-                Formatters.price(cart.total),
+                Formatters.price(displayTotal),
                 style: AppTextStyles.h4.copyWith(
                   fontWeight: FontWeight.w800,
                   color: AppColors.primary,

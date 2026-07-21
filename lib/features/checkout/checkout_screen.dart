@@ -13,6 +13,7 @@ import '../../core/widgets/cached_image.dart';
 import '../../core/widgets/app_button.dart';
 import '../../providers/cart_provider.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/gst_provider.dart';
 import '../profile/addresses_screen.dart';
 
 /// Checkout stepper labels
@@ -302,9 +303,11 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
         );
 
         final cart = ref.read(cartProvider);
-        final total = cart.items.fold<double>(
-          0, (sum, i) => sum + i.effectivePrice * i.quantity,
-        );
+        final gstAsync = ref.read(gstSettingProvider);
+        final gstSetting = gstAsync.valueOrNull ?? const GstSetting(percentage: 18.0, isIncluded: true);
+        final baseSubtotal = cart.subtotal;
+        final gstAmount = baseSubtotal * (gstSetting.percentage / 100);
+        final total = baseSubtotal + gstAmount - _couponDiscount + (_giftWrap ? 50 : 0);
 
         // Build items matching website format
         final itemsForBackend = cart.items.map((i) => {
@@ -391,13 +394,23 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
   @override
   Widget build(BuildContext context) {
     final cart = ref.watch(cartProvider);
-    final total = cart.total;
+    final gstAsync = ref.watch(gstSettingProvider);
+    final gstSetting = gstAsync.valueOrNull ?? const GstSetting(percentage: 18.0, isIncluded: true);
+    final baseSubtotal = cart.subtotal;
+    final gstAmount = baseSubtotal * (gstSetting.percentage / 100);
+    final total = baseSubtotal + gstAmount - _couponDiscount + (_giftWrap ? 50 : 0);
 
     return Scaffold(
       backgroundColor: AppColors.bg,
       appBar: AppBar(
         leading: IconButton(
-          onPressed: () => context.pop(),
+          onPressed: () {
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.go('/home');
+            }
+          },
           icon: const Icon(Icons.arrow_back_ios_rounded, size: 20),
         ),
         title: const Text('Checkout'),
@@ -420,7 +433,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
           ),
 
           // ── Bottom summary ──
-          _buildBottomSummary(cart, total),
+          _buildBottomSummary(cart, total, gstSetting),
         ],
       ),
     );
@@ -1003,7 +1016,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     );
   }
 
-  Widget _buildBottomSummary(CartState cart, double total) {
+  Widget _buildBottomSummary(CartState cart, double total, GstSetting gstSetting) {
     return Container(
       padding: EdgeInsets.fromLTRB(
           20, 12, 20, MediaQuery.of(context).padding.bottom + 12),
@@ -1065,10 +1078,33 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
           const SizedBox(height: 8),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Text('Total',
-                  style: AppTextStyles.bodySm
-                      .copyWith(fontWeight: FontWeight.w600)),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Total Payable',
+                    style: AppTextStyles.bodySm.copyWith(fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 2),
+                  Row(
+                    children: [
+                      const Icon(Icons.check_circle_rounded, size: 12, color: Color(0xFF10B981)),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Includes ${gstSetting.percentage.toStringAsFixed(0)}% GST (+₹${(cart.subtotal * (gstSetting.percentage / 100)).toStringAsFixed(0)})',
+                        style: const TextStyle(
+                          fontFamily: 'Outfit',
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF10B981),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
               Text(
                 Formatters.price(total),
                 style: AppTextStyles.h4.copyWith(
