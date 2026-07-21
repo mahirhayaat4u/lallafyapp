@@ -269,6 +269,8 @@ class BestSellerSection extends ConsumerWidget {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      useRootNavigator: true,
+      showDragHandle: false,
       backgroundColor: Colors.transparent,
       builder: (context) => _VideoPlayerModal(
         products: products,
@@ -522,13 +524,15 @@ class _VideoPlayerModalState extends State<_VideoPlayerModal> {
           ),
 
           // Bottom Product Info & View Product Navigation Bar
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: const BoxDecoration(
-              color: Color(0xFF181B24),
-              border: Border(top: BorderSide(color: Colors.white10)),
-            ),
-            child: Row(
+          SafeArea(
+            top: false,
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              decoration: const BoxDecoration(
+                color: Color(0xFF181B24),
+                border: Border(top: BorderSide(color: Colors.white10)),
+              ),
+              child: Row(
               children: [
                 ClipRRect(
                   borderRadius: BorderRadius.circular(10),
@@ -615,6 +619,7 @@ class _VideoPlayerModalState extends State<_VideoPlayerModal> {
                 ),
               ],
             ),
+          ),
           ),
         ],
       ),

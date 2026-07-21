@@ -29,63 +29,63 @@ class AppBottomNavShell extends ConsumerWidget {
         // We don't pop here, so the app stays open on home tab
       },
       child: Scaffold(
-      body: navigationShell,
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-          border: const Border(
-            top: BorderSide(color: Color(0xFFF3F4F6), width: 1),
+        extendBody: true,
+        backgroundColor: AppColors.bg,
+        body: navigationShell,
+        bottomNavigationBar: Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black12,
+                blurRadius: 10,
+                offset: Offset(0, -2),
+              ),
+            ],
           ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.06),
-              blurRadius: 18,
-              offset: const Offset(0, -4),
-            ),
-          ],
-        ),
-        child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _NavItem(
-                  icon: Icons.home_outlined,
-                  activeIcon: Icons.home_rounded,
-                  label: 'Home',
-                  isActive: navigationShell.currentIndex == 0,
-                  onTap: () => _onTap(0),
+          child: SafeArea(
+                top: false,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    _NavItem(
+                      icon: Icons.home_outlined,
+                      activeIcon: Icons.home_rounded,
+                      label: 'Home',
+                      isActive: navigationShell.currentIndex == 0,
+                      onTap: () => _onTap(0),
+                    ),
+                    _NavItem(
+                      icon: Icons.grid_view_outlined,
+                      activeIcon: Icons.grid_view_rounded,
+                      label: 'Explore',
+                      isActive: navigationShell.currentIndex == 1,
+                      onTap: () => _onTap(1),
+                    ),
+                    _NavItem(
+                      icon: Icons.grid_view_outlined,
+                      activeIcon: Icons.grid_view_rounded,
+                      label: 'Categories',
+                      isActive: navigationShell.currentIndex == 2,
+                      onTap: () => _onTap(2),
+                    ),
+                    _NavItem(
+                      icon: Icons.person_outline_rounded,
+                      activeIcon: Icons.person_rounded,
+                      label: 'Profile',
+                      isActive: navigationShell.currentIndex == 3,
+                      onTap: () => _onTap(3),
+                    ),
+                  ],
                 ),
-                _NavItem(
-                  icon: Icons.grid_view_outlined,
-                  activeIcon: Icons.grid_view_rounded,
-                  label: 'Explore',
-                  isActive: navigationShell.currentIndex == 1,
-                  onTap: () => _onTap(1),
-                ),
-                _NavItem(
-                  icon: Icons.grid_view_outlined,
-                  activeIcon: Icons.grid_view_rounded,
-                  label: 'Categories',
-                  isActive: navigationShell.currentIndex == 2,
-                  onTap: () => _onTap(2),
-                ),
-                _NavItem(
-                  icon: Icons.person_outline_rounded,
-                  activeIcon: Icons.person_rounded,
-                  label: 'Profile',
-                  isActive: navigationShell.currentIndex == 3,
-                  onTap: () => _onTap(3),
-                ),
-              ],
+              ),
             ),
           ),
         ),
-      ),
-      ),
-    );
+      );
   }
 
   void _onTap(int index) {

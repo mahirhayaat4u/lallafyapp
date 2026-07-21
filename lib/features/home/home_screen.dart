@@ -177,6 +177,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       backgroundColor: AppColors.bg,
       drawer: const AppDrawer(),
       body: SafeArea(
+        bottom: false,
         child: RefreshIndicator(
           color: AppColors.primary,
           onRefresh: () async {
@@ -338,7 +339,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
               // ── Footer ──
               const SizedBox.shrink(),
 
-              const SizedBox(height: 24),
+              const SizedBox(height: 100),
             ],
           ),
         ),

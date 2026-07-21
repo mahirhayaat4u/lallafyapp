@@ -291,6 +291,7 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
     final filters = ref.read(shopFiltersProvider);
     showModalBottomSheet(
       context: context,
+      showDragHandle: false,
       backgroundColor: AppColors.bgCard,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
@@ -358,6 +359,7 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      showDragHandle: false,
       backgroundColor: AppColors.bgCard,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
@@ -614,6 +616,7 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      showDragHandle: false,
       backgroundColor: AppColors.bgCard,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
