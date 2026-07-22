@@ -174,6 +174,11 @@ GoRouter createRouter(Ref ref) {
                 name: 'profile',
                 builder: (context, state) => const ProfileScreen(),
               ),
+              GoRoute(
+                path: '/wishlist',
+                name: 'wishlist',
+                builder: (context, state) => const WishlistScreen(),
+              ),
             ],
           ),
         ],
@@ -205,11 +210,7 @@ GoRouter createRouter(Ref ref) {
           return ProductDetailScreen(slug: slug);
         },
       ),
-      GoRoute(
-        path: '/wishlist',
-        name: 'wishlist',
-        builder: (context, state) => const WishlistScreen(),
-      ),
+
       GoRoute(
         path: '/checkout',
         name: 'checkout',

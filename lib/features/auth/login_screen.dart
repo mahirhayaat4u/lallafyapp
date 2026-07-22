@@ -92,8 +92,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
   Widget build(BuildContext context) {
     final authState = ref.watch(authProvider);
 
-    return Scaffold(
-      body: Stack(
+    return PopScope(
+      canPop: context.canPop(),
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        context.go('/home');
+      },
+      child: Scaffold(
+        body: Stack(
         children: [
           // ── Background Glows & Gradients ──
           Container(
@@ -365,7 +371,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
           ),
         ],
       ),
-    );
+    ),
+   );
   }
 
   Widget _buildSocialButton({required Widget child, required VoidCallback onTap}) {

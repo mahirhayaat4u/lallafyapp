@@ -120,12 +120,13 @@ class AuthNotifier extends StateNotifier<AuthState> {
       state = state.copyWith(isLoading: false, error: e.message);
       rethrow;
     } on DioException catch (e) {
-      final data = e.response?.data;
-      final msg = (data is Map)
-          ? (data['message'] ?? data['error'] ?? 'Login failed. Please check credentials.')
-          : 'Login failed. Please check credentials.';
-      state = state.copyWith(isLoading: false, error: msg.toString());
-      throw ApiException(message: msg.toString(), statusCode: e.response?.statusCode);
+      final msg = (e.error is ApiException)
+          ? (e.error as ApiException).message
+          : ((e.response?.data is Map)
+              ? (e.response?.data['message'] ?? e.response?.data['error'] ?? 'Login failed. Please check credentials.')
+              : 'Login failed. Please check credentials.');
+      state = state.copyWith(isLoading: false, error: msg);
+      throw ApiException(message: msg, statusCode: e.response?.statusCode);
     } catch (e) {
       state = state.copyWith(
         isLoading: false,
@@ -160,12 +161,13 @@ class AuthNotifier extends StateNotifier<AuthState> {
       state = state.copyWith(isLoading: false, error: e.message);
       rethrow;
     } on DioException catch (e) {
-      final data = e.response?.data;
-      final msg = (data is Map)
-          ? (data['message'] ?? data['error'] ?? 'User already exists or registration failed.')
-          : 'Registration failed. Check details.';
-      state = state.copyWith(isLoading: false, error: msg.toString());
-      throw ApiException(message: msg.toString(), statusCode: e.response?.statusCode);
+      final msg = (e.error is ApiException)
+          ? (e.error as ApiException).message
+          : ((e.response?.data is Map)
+              ? (e.response?.data['message'] ?? e.response?.data['error'] ?? 'User already exists or registration failed.')
+              : 'Registration failed. Check details.');
+      state = state.copyWith(isLoading: false, error: msg);
+      throw ApiException(message: msg, statusCode: e.response?.statusCode);
     } catch (e) {
       state = state.copyWith(
         isLoading: false,

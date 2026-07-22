@@ -39,6 +39,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
   bool _couponLoading = false;
   bool _paying = false;
   String _paymentMethod = 'online'; // 'online' or 'cod'
+  bool _orderSuccess = false;
 
   // New address form
   bool _showAddAddress = false;
@@ -90,13 +91,14 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       if (verifyRes.data['success'] == true) {
         ref.read(cartProvider.notifier).clearCart();
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Payment successful! Order placed 🎉'),
-              backgroundColor: AppColors.success,
-            ),
-          );
-          context.go('/orders');
+          setState(() {
+            _orderSuccess = true;
+          });
+          Future.delayed(const Duration(seconds: 4), () {
+            if (mounted) {
+              context.go('/orders');
+            }
+          });
         }
       } else {
         if (mounted) {
@@ -112,15 +114,14 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Payment successful! Payment ID: ${response.paymentId}. Order will be confirmed shortly.',
-            ),
-            backgroundColor: AppColors.success,
-          ),
-        );
-        context.go('/orders');
+        setState(() {
+          _orderSuccess = true;
+        });
+        Future.delayed(const Duration(seconds: 4), () {
+          if (mounted) {
+            context.go('/orders');
+          }
+        });
       }
     } finally {
       if (mounted) setState(() => _paying = false);
@@ -237,6 +238,12 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
         .map((i) => {'productId': i.productId, 'quantity': i.quantity})
         .toList();
 
+    final gstAsync = ref.read(gstSettingProvider);
+    final gstSetting = gstAsync.valueOrNull ?? const GstSetting(percentage: 18.0, isIncluded: true);
+    final baseSubtotal = cart.subtotal;
+    final gstAmount = baseSubtotal * (gstSetting.percentage / 100);
+    final total = baseSubtotal + gstAmount + cart.shipping - _couponDiscount + (_giftWrap ? 50 : 0);
+
     try {
       if (_paymentMethod == 'cod') {
         // Get the selected address details
@@ -280,17 +287,22 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
               'pincode': selectedAddr['pincode'] ?? '',
             },
             'paymentMethod': 'cod',
+            'shippingCharge': cart.shipping,
+            'gstAmount': gstAmount,
+            'discount': _couponDiscount,
+            'totalAmount': total,
           },
         );
         ref.read(cartProvider.notifier).clearCart();
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Order placed! Pay on delivery 🎉'),
-              backgroundColor: AppColors.success,
-            ),
-          );
-          context.go('/orders');
+          setState(() {
+            _orderSuccess = true;
+          });
+          Future.delayed(const Duration(seconds: 4), () {
+            if (mounted) {
+              context.go('/orders');
+            }
+          });
         }
       } else {
         // Online payment — Razorpay integration
@@ -302,12 +314,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
           orElse: () => null,
         );
 
-        final cart = ref.read(cartProvider);
-        final gstAsync = ref.read(gstSettingProvider);
-        final gstSetting = gstAsync.valueOrNull ?? const GstSetting(percentage: 18.0, isIncluded: true);
-        final baseSubtotal = cart.subtotal;
-        final gstAmount = baseSubtotal * (gstSetting.percentage / 100);
-        final total = baseSubtotal + gstAmount - _couponDiscount + (_giftWrap ? 50 : 0);
+
 
         // Build items matching website format
         final itemsForBackend = cart.items.map((i) => {
@@ -339,6 +346,11 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
             'items': itemsForBackend,
             'shippingDetails': shippingDetails,
             'userId': userId,
+            'itemsTotal': cart.subtotal,
+            'shippingCharge': cart.shipping,
+            'gstAmount': gstAmount,
+            'discount': _couponDiscount,
+            'totalAmount': total,
           },
         );
 
@@ -351,6 +363,10 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
           'totalAmount': total,
           'shippingDetails': shippingDetails,
           'userId': userId,
+          'itemsTotal': cart.subtotal,
+          'shippingCharge': cart.shipping,
+          'gstAmount': gstAmount,
+          'discount': _couponDiscount,
         };
 
         final razorpayKey = orderRes.data['keyId'] ?? 'rzp_test_TDJpb2HvvvomV0';
@@ -391,14 +407,119 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     }
   }
 
+  Widget _buildThankYouScreen() {
+    return Scaffold(
+      backgroundColor: Colors.white,
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  width: 100,
+                  height: 100,
+                  decoration: BoxDecoration(
+                    color: AppColors.success.withOpacity(0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Center(
+                    child: Text(
+                      '🎉',
+                      style: TextStyle(fontSize: 48),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Text(
+                  'Thank You!',
+                  style: AppTextStyles.h1.copyWith(
+                    fontSize: 28,
+                    fontWeight: FontWeight.w900,
+                    color: const Color(0xFF1F2937),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Order Placed Successfully',
+                  style: AppTextStyles.h3.copyWith(
+                    color: AppColors.success,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Your order has been placed and is being processed.\nThank you for shopping with Lallafy!',
+                  textAlign: TextAlign.center,
+                  style: AppTextStyles.body.copyWith(
+                    color: Colors.grey.shade600,
+                    height: 1.5,
+                  ),
+                ),
+                const SizedBox(height: 48),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2.5,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      'Redirecting to your orders...',
+                      style: AppTextStyles.bodySm.copyWith(
+                        color: Colors.grey.shade500,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  height: 52,
+                  child: ElevatedButton(
+                    onPressed: () => context.go('/orders'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(AppTheme.radiusFull),
+                      ),
+                    ),
+                    child: Text(
+                      'Go to My Orders',
+                      style: AppTextStyles.bodySm.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    if (_orderSuccess) {
+      return _buildThankYouScreen();
+    }
     final cart = ref.watch(cartProvider);
     final gstAsync = ref.watch(gstSettingProvider);
     final gstSetting = gstAsync.valueOrNull ?? const GstSetting(percentage: 18.0, isIncluded: true);
     final baseSubtotal = cart.subtotal;
     final gstAmount = baseSubtotal * (gstSetting.percentage / 100);
-    final total = baseSubtotal + gstAmount - _couponDiscount + (_giftWrap ? 50 : 0);
+    final total = baseSubtotal + gstAmount + cart.shipping - _couponDiscount + (_giftWrap ? 50 : 0);
 
     return Scaffold(
       backgroundColor: AppColors.bg,
@@ -428,6 +549,10 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
               children: [
                 if (_step == 0) _buildAddressStep(),
                 if (_step == 1) _buildPaymentStep(total),
+                const SizedBox(height: 24),
+                const Divider(),
+                const SizedBox(height: 16),
+                _buildOrderItemsSection(cart),
               ],
             ),
           ),
@@ -1016,6 +1141,115 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     );
   }
 
+  Widget _buildOrderItemsSection(CartState cart) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            const Icon(Icons.shopping_bag_outlined, color: AppColors.primary, size: 20),
+            const SizedBox(width: 8),
+            Text(
+              'Order Review (${cart.totalItems} Items)',
+              style: AppTextStyles.h4.copyWith(fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Container(
+          decoration: BoxDecoration(
+            color: AppColors.bgCard,
+            borderRadius: BorderRadius.circular(AppTheme.radiusLg),
+            border: Border.all(color: AppColors.border),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: ListView.separated(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: cart.items.length,
+            separatorBuilder: (_, __) => Divider(color: AppColors.border, height: 16),
+            itemBuilder: (context, index) {
+              final item = cart.items[index];
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Product Image
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: item.imageUrl != null
+                        ? CachedImage(
+                            imageUrl: item.imageUrl!,
+                            width: 48,
+                            height: 48,
+                            fit: BoxFit.cover,
+                          )
+                        : Container(
+                            width: 48,
+                            height: 48,
+                            color: AppColors.bgElevated,
+                            child: const Center(
+                              child: Text('🎁', style: TextStyle(fontSize: 18)),
+                            ),
+                          ),
+                  ),
+                  const SizedBox(width: 12),
+                  // Product details
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          item.name,
+                          style: AppTextStyles.bodySm.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.text,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 4),
+                        // Quantity & Price
+                        if (item.quantity > 1) ...[
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                '${item.quantity} x ${Formatters.price(item.effectivePrice)}',
+                                style: AppTextStyles.bodyXs.copyWith(
+                                  color: AppColors.textMuted,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              Text(
+                                Formatters.price(item.lineTotal),
+                                style: AppTextStyles.bodySm.copyWith(
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.primary,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ] else ...[
+                          Text(
+                            Formatters.price(item.effectivePrice),
+                            style: AppTextStyles.bodySm.copyWith(
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.primary,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildBottomSummary(CartState cart, double total, GstSetting gstSetting) {
     return Container(
       padding: EdgeInsets.fromLTRB(
@@ -1093,7 +1327,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                       const Icon(Icons.check_circle_rounded, size: 12, color: Color(0xFF10B981)),
                       const SizedBox(width: 4),
                       Text(
-                        'Includes ${gstSetting.percentage.toStringAsFixed(0)}% GST (+₹${(cart.subtotal * (gstSetting.percentage / 100)).toStringAsFixed(0)})',
+                        'Includes ${gstSetting.percentage.toStringAsFixed(0)}% GST & Shipping (${cart.shipping == 0 ? 'FREE' : '+₹' + cart.shipping.round().toString()})',
                         style: const TextStyle(
                           fontFamily: 'Outfit',
                           fontSize: 10,

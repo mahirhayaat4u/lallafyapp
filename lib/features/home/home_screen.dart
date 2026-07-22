@@ -17,6 +17,7 @@ import '../../providers/wishlist_provider.dart';
 import '../../models/category.dart';
 import '../../models/homepage_card.dart';
 import '../../models/age_group.dart';
+import '../shop/shop_screen.dart';
 
 import 'widgets/banner_carousel.dart';
 import 'widgets/category_circles.dart';
@@ -1060,7 +1061,7 @@ class _ShopByCategorySection extends ConsumerWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Shop by Category',
+                'Shop by Age',
                 style: AppTextStyles.h2.copyWith(
                   fontWeight: FontWeight.bold,
                   fontSize: 18,
@@ -1068,7 +1069,12 @@ class _ShopByCategorySection extends ConsumerWidget {
                 ),
               ),
               GestureDetector(
-                onTap: () => context.go('/categories'),
+                onTap: () {
+                  ref.read(shopFiltersProvider.notifier).state = const ShopFilters(
+                    ageGroup: '0–1 Years,1–3 Years,4–12 Years,13+ Years',
+                  );
+                  context.go('/shop');
+                },
                 child: Row(
                   children: [
                     Text(

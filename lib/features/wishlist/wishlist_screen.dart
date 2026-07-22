@@ -8,6 +8,7 @@ import '../../core/theme/app_theme.dart';
 import '../../core/widgets/loading_widget.dart';
 import '../../providers/wishlist_provider.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/cart_provider.dart';
 import '../home/widgets/product_card.dart';
 
 /// Wishlist Screen — shows saved products in a 2-column grid
@@ -32,6 +33,7 @@ class _WishlistScreenState extends ConsumerState<WishlistScreen> {
   Widget build(BuildContext context) {
     final wishlist = ref.watch(wishlistProvider);
     final auth = ref.watch(authProvider);
+    final cartItems = ref.watch(cartProvider).totalItems;
 
     return PopScope(
       canPop: context.canPop(),
@@ -52,7 +54,46 @@ class _WishlistScreenState extends ConsumerState<WishlistScreen> {
             },
             icon: const Icon(Icons.arrow_back_ios_rounded, size: 20),
           ),
-          title: const Text('❤️ My Wishlist'),
+          title: const Text('Wishlist'),
+          centerTitle: false,
+          actions: [
+            Stack(
+              alignment: Alignment.center,
+              clipBehavior: Clip.none,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.shopping_cart_outlined, size: 26),
+                  onPressed: () => context.go('/cart'),
+                ),
+                if (cartItems > 0)
+                  Positioned(
+                    right: 6,
+                    top: 6,
+                    child: Container(
+                      padding: const EdgeInsets.all(3),
+                      decoration: const BoxDecoration(
+                        color: AppColors.primary,
+                        shape: BoxShape.circle,
+                      ),
+                      constraints: const BoxConstraints(
+                        minWidth: 16,
+                        minHeight: 16,
+                      ),
+                      child: Text(
+                        '$cartItems',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 9,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(width: 8),
+          ],
         ),
       body: !auth.isAuthenticated
           ? _buildLoginPrompt(context)
@@ -73,8 +114,8 @@ class _WishlistScreenState extends ConsumerState<WishlistScreen> {
                         ),
                         Expanded(
                           child: GridView.builder(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 16, vertical: 4),
+                            padding: const EdgeInsets.only(
+                                left: 16, right: 16, top: 4, bottom: 100),
                             gridDelegate:
                                 const SliverGridDelegateWithFixedCrossAxisCount(
                               crossAxisCount: 2,

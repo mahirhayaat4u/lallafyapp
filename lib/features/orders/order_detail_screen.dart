@@ -617,6 +617,7 @@ class _OrderDetailBody extends StatelessWidget {
     final giftWrapFee = double.tryParse('${order['giftWrapFee'] ?? 0}') ?? 0;
     final discount = double.tryParse('${order['discount'] ?? 0}') ?? 0;
     final total = double.tryParse('${order['totalAmount'] ?? order['total'] ?? 0}') ?? 0;
+    final gstAmount = double.tryParse('${order['gstAmount']}') ?? (total - subtotal - shipping - giftWrapFee + discount);
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -634,6 +635,8 @@ class _OrderDetailBody extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           _priceRow('Subtotal', Formatters.price(subtotal)),
+          if (gstAmount > 0.5)
+            _priceRow('GST (18%)', Formatters.price(gstAmount)),
           _priceRow(
             'Shipping',
             shipping == 0 ? 'FREE' : Formatters.price(shipping),

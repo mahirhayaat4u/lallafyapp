@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
@@ -599,7 +600,10 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                   // Share Icon
                   IconButton(
                     onPressed: () {
-                      // Share action
+                      Share.share(
+                        'Check out ${product.name} on Lallafy!\n\nhttps://lallafy.com/product/${product.slug ?? product.id}',
+                        subject: 'Share Product',
+                      );
                     },
                     icon: const Icon(
                       Icons.share_outlined,

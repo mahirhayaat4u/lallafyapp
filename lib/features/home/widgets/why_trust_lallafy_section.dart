@@ -12,19 +12,19 @@ class WhyTrustLallafySection extends StatelessWidget {
       desc: 'Curated to meet the highest safety and playtime standards for kids.',
     ),
     _FeatureItem(
-      icon: Icons.inventory_2_rounded,
-      title: 'Bulk Inventory',
-      desc: 'Ready-to-ship inventory for businesses of all sizes from one piece to bulk.',
+      icon: Icons.extension_rounded,
+      title: 'Huge Selection',
+      desc: 'Explore hundreds of safe, fun, and educational toys for kids of all ages.',
     ),
     _FeatureItem(
       icon: Icons.local_shipping_rounded,
-      title: 'Pan-India Delivery',
-      desc: 'Fast and reliable logistics network covering even the remotest pins.',
+      title: 'Fast Delivery',
+      desc: 'Quick and reliable door-to-door delivery right to your doorstep across India.',
     ),
     _FeatureItem(
       icon: Icons.support_agent_rounded,
-      title: 'Partner Support',
-      desc: 'Dedicated support team to help you scale your retail business.',
+      title: 'Friendly Support',
+      desc: 'Our dedicated customer service team is always here to help you.',
     ),
   ];
 
@@ -48,7 +48,7 @@ class WhyTrustLallafySection extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            'Empowering Toy Retailers Across India with Premium B2B Solutions',
+            'Delivering Happiness with Premium Quality, Safe, & Fun Toys for Kids',
             style: TextStyle(
               fontFamily: 'Outfit',
               fontSize: 13,

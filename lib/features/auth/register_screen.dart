@@ -112,8 +112,14 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
   Widget build(BuildContext context) {
     final authState = ref.watch(authProvider);
 
-    return Scaffold(
-      body: Stack(
+    return PopScope(
+      canPop: context.canPop(),
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        context.go('/home');
+      },
+      child: Scaffold(
+        body: Stack(
         children: [
           // ── Background Glows & Gradients ──
           Container(
@@ -481,7 +487,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
           ),
         ],
       ),
-    );
+    ),
+   );
   }
 
   Widget _buildFeaturesRow() {

@@ -48,7 +48,60 @@ class CartScreen extends ConsumerWidget {
             if (!cart.isEmpty)
               TextButton(
                 onPressed: () {
-                  ref.read(cartProvider.notifier).clearCart();
+                  showDialog(
+                    context: context,
+                    builder: (BuildContext ctx) {
+                      return AlertDialog(
+                        backgroundColor: AppColors.bgCard,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        title: Row(
+                          children: [
+                            const Text('🗑️ ', style: TextStyle(fontSize: 24)),
+                            Text(
+                              'Clear Cart?',
+                              style: AppTextStyles.h3.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.black87,
+                              ),
+                            ),
+                          ],
+                        ),
+                        content: Text(
+                          'Are you sure you want to remove all items from your cart?',
+                          style: AppTextStyles.body.copyWith(
+                            color: Colors.grey.shade600,
+                          ),
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(ctx),
+                            child: Text(
+                              'Cancel',
+                              style: AppTextStyles.bodySm.copyWith(
+                                color: Colors.grey.shade600,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                          TextButton(
+                            onPressed: () {
+                              ref.read(cartProvider.notifier).clearCart();
+                              Navigator.pop(ctx);
+                            },
+                            child: Text(
+                              'Clear All',
+                              style: AppTextStyles.bodySm.copyWith(
+                                color: AppColors.danger,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                        ],
+                      );
+                    },
+                  );
                 },
                 child: Text(
                   '🗑️ Clear',
@@ -174,36 +227,6 @@ class _StoreGroup extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       child: Column(
         children: [
-          // Store header
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-            color: AppColors.bgElevated,
-            child: Row(
-              children: [
-                const Text('🏪', style: TextStyle(fontSize: 16)),
-                const SizedBox(width: 8),
-                Text(
-                  storeName,
-                  style: AppTextStyles.bodySm
-                      .copyWith(fontWeight: FontWeight.w600),
-                ),
-                const SizedBox(width: 8),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: AppColors.bgSurface,
-                    borderRadius: BorderRadius.circular(AppTheme.radiusFull),
-                  ),
-                  child: Text(
-                    '${items.length} item${items.length > 1 ? 's' : ''}',
-                    style: AppTextStyles.bodyXs
-                        .copyWith(color: AppColors.textMuted),
-                  ),
-                ),
-              ],
-            ),
-          ),
           // Items
           for (final item in items)
             _CartItemRow(
