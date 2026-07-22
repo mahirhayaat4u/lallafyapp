@@ -323,43 +323,7 @@ class _OrderCard extends ConsumerWidget {
                   color: AppColors.primary,
                 ),
               ),
-              Row(
-                children: [
-                  if (['pending', 'confirmed'].contains(status))
-                    TextButton(
-                      onPressed: () async {
-                        try {
-                          await DioClient().put(
-                              ApiConstants.orderCancel(order['_id'] ?? order['id']  ?? ''));
-                          // Refresh orders list
-                          ref.invalidate(allOrdersProvider);
-                          if (context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Order cancelled successfully ✅'),
-                                backgroundColor: AppColors.success,
-                              ),
-                            );
-                          }
-                        } catch (e) {
-                          if (context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text('Failed to cancel: $e'),
-                                backgroundColor: AppColors.danger,
-                              ),
-                            );
-                          }
-                        }
-                      },
-                      child: Text(
-                        '✕ Cancel',
-                        style: AppTextStyles.bodyXs
-                            .copyWith(color: AppColors.danger),
-                      ),
-                    ),
-                ],
-              ),
+              const SizedBox.shrink(),
             ],
           ),
         ],

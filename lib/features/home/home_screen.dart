@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
@@ -743,6 +744,34 @@ class _SubcategoriesSection extends ConsumerWidget {
 }
 
 
+void _handleLinkRedirect(BuildContext context, String? link) {
+  if (link == null || link.isEmpty) {
+    context.push('/shop');
+    return;
+  }
+
+  if (link.startsWith('http://') || link.startsWith('https://')) {
+    try {
+      final uri = Uri.parse(link);
+      if (uri.host.contains('lallafy.com')) {
+        final internalPath = uri.path;
+        final query = uri.hasQuery ? '?${uri.query}' : '';
+        final fullInternalRoute = '$internalPath$query';
+        context.push(fullInternalRoute);
+        return;
+      } else {
+        launchUrl(uri, mode: LaunchMode.externalApplication);
+        return;
+      }
+    } catch (e) {
+      debugPrint('Error parsing banner link: $e');
+    }
+  }
+
+  // Fallback to internal route
+  context.push(link);
+}
+
 class _BannersSection extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -752,7 +781,7 @@ class _BannersSection extends ConsumerWidget {
       data: (banners) => BannerCarousel(
         banners: banners,
         onBannerTap: (link) {
-          context.push(link ?? '/shop');
+          _handleLinkRedirect(context, link);
         },
       ),
       loading: () => Container(

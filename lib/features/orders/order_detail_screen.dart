@@ -10,7 +10,8 @@ import '../../core/network/dio_client.dart';
 import '../../core/utils/formatters.dart';
 import '../../core/widgets/loading_widget.dart';
 import '../../core/widgets/cached_image.dart';
-
+import 'package:url_launcher/url_launcher.dart';
+import 'orders_screen.dart';
 /// Order detail provider
 final orderDetailProvider =
     FutureProvider.family<Map<String, dynamic>, String>((ref, orderId) async {
@@ -50,7 +51,7 @@ class OrderDetailScreen extends ConsumerWidget {
         ),
       ),
       body: orderAsync.when(
-        data: (order) => _OrderDetailBody(order: order),
+        data: (order) => _OrderDetailBody(order: order, orderId: orderId),
         loading: () => const LoadingWidget(message: 'Loading order details...'),
         error: (err, _) => Center(
           child: Padding(
@@ -88,13 +89,14 @@ class OrderDetailScreen extends ConsumerWidget {
   }
 }
 
-class _OrderDetailBody extends StatelessWidget {
+class _OrderDetailBody extends ConsumerWidget {
   final Map<String, dynamic> order;
+  final String orderId;
 
-  const _OrderDetailBody({required this.order});
+  const _OrderDetailBody({required this.order, required this.orderId});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final status = (order['orderStatus'] ?? order['status'] ?? 'pending') as String;
     final isCancelled = status == 'cancelled';
 
@@ -132,8 +134,207 @@ class _OrderDetailBody extends StatelessWidget {
 
         // ── Delivery Address ──
         if (order['shippingAddress'] != null || order['address'] != null) _buildAddressCard(),
+        const SizedBox(height: 16),
+
+        // ── Customer Support ──
+        _buildSupportSection(context),
+
+        // ── Cancel Order Button ──
+        _buildCancelOrderButton(context, ref),
         const SizedBox(height: 32),
       ],
+    );
+  }
+
+  Future<void> _launchUrl(String urlString) async {
+    final Uri url = Uri.parse(urlString);
+    try {
+      if (await canLaunchUrl(url)) {
+        await launchUrl(url, mode: LaunchMode.externalApplication);
+      }
+    } catch (e) {
+      debugPrint('Error launching URL: $e');
+    }
+  }
+
+  Widget _buildSupportSection(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.bgCard,
+        borderRadius: BorderRadius.circular(AppTheme.radiusLg),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.help_outline_rounded, color: AppColors.primary, size: 20),
+              const SizedBox(width: 8),
+              Text(
+                'Need Help with this Order?',
+                style: AppTextStyles.bodySm.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.text,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'If you have any questions regarding delivery, returns, or product issues, feel free to contact us.',
+            style: AppTextStyles.bodyXs.copyWith(color: AppColors.textMuted),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () => _launchUrl('https://wa.me/917290900282?text=Hi%20Lallafy%20Support!%20My%20Order%20ID%20is%20${order['orderNumber'] ?? ''}'),
+                  icon: const Icon(Icons.chat_bubble_outline_rounded, size: 16, color: Color(0xFF25D366)),
+                  label: Text(
+                    'WhatsApp',
+                    style: AppTextStyles.bodyXs.copyWith(fontWeight: FontWeight.w700, color: const Color(0xFF25D366)),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: Color(0xFF25D366)),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppTheme.radiusMd)),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () => _launchUrl('tel:+917290900282'),
+                  icon: const Icon(Icons.phone_in_talk_outlined, size: 16, color: AppColors.primary),
+                  label: Text(
+                    'Call Us',
+                    style: AppTextStyles.bodyXs.copyWith(fontWeight: FontWeight.w700, color: AppColors.primary),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: AppColors.primary),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppTheme.radiusMd)),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCancelOrderButton(BuildContext context, WidgetRef ref) {
+    final status = (order['orderStatus'] ?? order['status'] ?? 'pending') as String;
+    final createdAtStr = order['createdAt']?.toString() ?? '';
+    final createdAt = DateTime.tryParse(createdAtStr) ?? DateTime.now();
+    final isWithinOneDay = DateTime.now().difference(createdAt).inHours < 24;
+    final showCancelButton = ['pending', 'confirmed'].contains(status) && isWithinOneDay;
+
+    if (!showCancelButton) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 16),
+      child: SizedBox(
+        width: double.infinity,
+        height: 50,
+        child: OutlinedButton(
+          onPressed: () => _showCancelConfirmationDialog(context, ref),
+          style: OutlinedButton.styleFrom(
+            side: const BorderSide(color: AppColors.danger, width: 1.5),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+            ),
+          ),
+          child: Text(
+            'Cancel Order',
+            style: AppTextStyles.bodySm.copyWith(
+              color: AppColors.danger,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showCancelConfirmationDialog(BuildContext context, WidgetRef ref) {
+    showDialog(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppTheme.radiusLg),
+        ),
+        title: Text(
+          'Cancel Order?',
+          style: AppTextStyles.h3.copyWith(fontWeight: FontWeight.w800),
+        ),
+        content: Text(
+          'Are you sure you want to cancel this order? This action cannot be undone.',
+          style: AppTextStyles.bodySm.copyWith(color: AppColors.textMuted),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogCtx),
+            child: Text(
+              'No, Keep It',
+              style: AppTextStyles.bodySm.copyWith(
+                color: AppColors.text,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(dialogCtx);
+              try {
+                await DioClient().put(
+                  ApiConstants.orderCancel(order['_id'] ?? order['id'] ?? '')
+                );
+                
+                // Invalidate providers to refresh detail screen & list screen
+                ref.invalidate(orderDetailProvider(orderId));
+                ref.invalidate(allOrdersProvider);
+
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Order cancelled successfully ✅'),
+                      backgroundColor: AppColors.success,
+                    ),
+                  );
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Failed to cancel: $e'),
+                      backgroundColor: AppColors.danger,
+                    ),
+                  );
+                }
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.danger,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+              ),
+            ),
+            child: Text(
+              'Yes, Cancel',
+              style: AppTextStyles.bodySm.copyWith(
+                color: Colors.white,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 

@@ -33,6 +33,25 @@ class Banner {
     final hasTitle = (json['title'] as String?)?.isNotEmpty == true;
     final hasLabel = (json['label'] as String?)?.isNotEmpty == true;
 
+    String? finalLink = json['link'] as String?;
+    if (finalLink == null || finalLink.isEmpty) {
+      if (json['category'] != null) {
+        if (json['category'] is Map) {
+          final slug = json['category']['slug']?.toString();
+          if (slug != null && slug.isNotEmpty) {
+            finalLink = '/shop?category=$slug';
+          } else {
+            final id = (json['category']['_id'] ?? json['category']['id'])?.toString();
+            if (id != null && id.isNotEmpty) {
+              finalLink = '/shop?category=$id';
+            }
+          }
+        } else {
+          finalLink = '/shop?category=${json['category']}';
+        }
+      }
+    }
+
     return Banner(
       id: (json['_id'] ?? json['id'] ?? '').toString(),
       label: json['label'] as String?,
@@ -44,7 +63,7 @@ class Banner {
       buttonColor: json['buttonColor'] as String?,
       textColor: json['textColor'] as String?,
       btnTextColor: json['btnTextColor'] as String?,
-      link: json['link'] as String?,
+      link: finalLink,
       isImageOnly: json['isImageOnly'] as bool? ?? (!hasTitle && !hasLabel),
     );
   }
