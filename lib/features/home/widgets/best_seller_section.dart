@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:video_player/video_player.dart';
+import 'package:visibility_detector/visibility_detector.dart';
 
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/widgets/cached_image.dart';
@@ -280,7 +281,9 @@ class BestSellerSection extends ConsumerWidget {
   }
 }
 
-/// Auto-playing muted looping video player widget for Bestseller product clips
+/// Auto-playing muted looping video player widget for Bestseller product clips.
+/// Uses VisibilityDetector to only initialize & play when the card is visible,
+/// preventing Android MediaCodec exhaustion (max ~3-6 concurrent HW decoders).
 class _AutoLoopVideoPlayer extends StatefulWidget {
   final String videoUrl;
   final String fallbackImageUrl;
@@ -294,60 +297,117 @@ class _AutoLoopVideoPlayer extends StatefulWidget {
   State<_AutoLoopVideoPlayer> createState() => _AutoLoopVideoPlayerState();
 }
 
-class _AutoLoopVideoPlayerState extends State<_AutoLoopVideoPlayer> {
+class _AutoLoopVideoPlayerState extends State<_AutoLoopVideoPlayer>
+    with WidgetsBindingObserver {
   VideoPlayerController? _controller;
   bool _isInitialized = false;
+  bool _isVisible = false;
+  bool _isDisposing = false;
+
+  /// Unique key for VisibilityDetector — use the video URL hash
+  late final Key _visibilityKey = ValueKey('bs_video_${widget.videoUrl.hashCode}');
 
   @override
   void initState() {
     super.initState();
-    _initVideo();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Pause when app goes to background, resume when it comes back
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive) {
+      _controller?.pause();
+    } else if (state == AppLifecycleState.resumed && _isVisible) {
+      _controller?.play();
+    }
   }
 
   Future<void> _initVideo() async {
+    if (_isDisposing || _controller != null) return;
     try {
       String cleanUrl = widget.videoUrl.trim();
       if (cleanUrl.startsWith('http://')) {
         cleanUrl = cleanUrl.replaceFirst('http://', 'https://');
       }
       final uri = Uri.parse(cleanUrl);
-      _controller = VideoPlayerController.networkUrl(uri);
-      await _controller!.initialize();
-      await _controller!.setVolume(0); // Mute for autoplay on home card
-      await _controller!.setLooping(true);
-      await _controller!.play();
-      if (mounted) {
+      final controller = VideoPlayerController.networkUrl(uri);
+      _controller = controller;
+
+      await controller.initialize();
+      if (!mounted || _isDisposing) {
+        controller.dispose();
+        return;
+      }
+
+      await controller.setVolume(0);
+      await controller.setLooping(true);
+      await controller.play();
+
+      if (mounted && !_isDisposing) {
         setState(() => _isInitialized = true);
       }
     } catch (e) {
-      debugPrint("Best seller video player init error ($e) for ${widget.videoUrl}");
+      debugPrint("Best seller video init error ($e) for ${widget.videoUrl}");
+    }
+  }
+
+  void _releaseVideo() {
+    final c = _controller;
+    _controller = null;
+    _isInitialized = false;
+    if (c != null) {
+      c.pause();
+      c.dispose();
+    }
+  }
+
+  void _onVisibilityChanged(VisibilityInfo info) {
+    final visible = info.visibleFraction > 0.3; // At least 30% visible
+    if (visible == _isVisible) return;
+    _isVisible = visible;
+
+    if (visible) {
+      _initVideo();
+    } else {
+      _releaseVideo();
+      if (mounted) setState(() {});
     }
   }
 
   @override
   void dispose() {
+    _isDisposing = true;
+    WidgetsBinding.instance.removeObserver(this);
     _controller?.dispose();
+    _controller = null;
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_isInitialized && _controller != null && _controller!.value.isInitialized) {
-      return SizedBox.expand(
-        child: FittedBox(
-          fit: BoxFit.cover,
-          clipBehavior: Clip.antiAlias,
-          child: SizedBox(
-            width: _controller!.value.size.width,
-            height: _controller!.value.size.height,
-            child: VideoPlayer(_controller!),
-          ),
-        ),
-      );
-    }
-    return CachedImage(
-      imageUrl: widget.fallbackImageUrl,
-      fit: BoxFit.cover,
+    return VisibilityDetector(
+      key: _visibilityKey,
+      onVisibilityChanged: _onVisibilityChanged,
+      child: _isInitialized &&
+              _controller != null &&
+              _controller!.value.isInitialized
+          ? SizedBox.expand(
+              child: FittedBox(
+                fit: BoxFit.cover,
+                clipBehavior: Clip.antiAlias,
+                child: SizedBox(
+                  width: _controller!.value.size.width,
+                  height: _controller!.value.size.height,
+                  child: VideoPlayer(_controller!),
+                ),
+              ),
+            )
+          : CachedImage(
+              imageUrl: widget.fallbackImageUrl,
+              fit: BoxFit.cover,
+            ),
     );
   }
 }

@@ -40,6 +40,7 @@ dependencies:
   # ── Image & Media Loading ──
   cached_network_image: ^3.4.1   # Like FastImage — cached network images
   video_player: ^2.9.2           # For playing bestseller video clips
+  visibility_detector: ^0.4.0+2   # Lazy video init — only play visible cards
 
   # ── UI Components ──
   carousel_slider: ^5.0.0        # For hero banner carousel
