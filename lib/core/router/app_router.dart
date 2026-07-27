@@ -18,6 +18,7 @@ import '../../features/orders/order_detail_screen.dart';
 import '../../features/profile/profile_screen.dart';
 import '../../features/profile/addresses_screen.dart';
 import '../../features/search/search_screen.dart';
+import '../../features/referral/referral_screen.dart';
 import '../../features/support/support_screen.dart';
 import '../../features/support/terms_screen.dart';
 import '../widgets/bottom_nav_shell.dart';
@@ -238,6 +239,11 @@ GoRouter createRouter(Ref ref) {
         path: '/search',
         name: 'search',
         builder: (context, state) => const SearchScreen(),
+      ),
+      GoRoute(
+        path: '/referral',
+        name: 'referral',
+        builder: (context, state) => const ReferralScreen(),
       ),
     ],
 

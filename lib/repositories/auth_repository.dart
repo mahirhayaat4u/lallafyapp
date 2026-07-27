@@ -35,14 +35,19 @@ class AuthRepository {
     required String name,
     required String email,
     required String password,
+    String? referralCode,
   }) async {
+    final body = <String, dynamic>{
+      'name': name,
+      'email': email,
+      'password': password,
+    };
+    if (referralCode != null && referralCode.trim().isNotEmpty) {
+      body['referralCode'] = referralCode.trim().toUpperCase();
+    }
     final response = await _client.post(
       ApiConstants.register,
-      data: {
-        'name': name,
-        'email': email,
-        'password': password,
-      },
+      data: body,
     );
     final data = response.data;
     final token = (data['token'] ?? data['data']?['token'] ?? '').toString();

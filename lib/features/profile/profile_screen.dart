@@ -194,6 +194,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
             // ── Quick links ──
             _quickLink(Icons.shopping_bag_outlined, 'My Orders', '/orders'),
+            _quickLink(Icons.monetization_on_rounded, 'Supercoins & Referrals', '/referral'),
             _quickLink(Icons.favorite_outline, 'My Wishlist', '/wishlist'),
             _quickLink(Icons.location_on_outlined, 'Saved Addresses', '/addresses'),
             _quickLink(Icons.shopping_cart_outlined, 'My Cart', '/cart'),

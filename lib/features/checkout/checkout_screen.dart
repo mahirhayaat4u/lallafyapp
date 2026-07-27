@@ -41,6 +41,11 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
   String _paymentMethod = 'online'; // 'online' or 'cod'
   bool _orderSuccess = false;
 
+  // Supercoin state
+  bool _useCoins = false;
+  int _supercoinBalance = 0;
+  Map<String, dynamic>? _loyaltySettings;
+
   // New address form
   bool _showAddAddress = false;
   final _nameCtrl = TextEditingController();
@@ -61,6 +66,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     _razorpay.on(Razorpay.EVENT_PAYMENT_SUCCESS, _handlePaymentSuccess);
     _razorpay.on(Razorpay.EVENT_PAYMENT_ERROR, _handlePaymentError);
     _razorpay.on(Razorpay.EVENT_EXTERNAL_WALLET, _handleExternalWallet);
+    _fetchLoyaltyData();
   }
 
   @override
@@ -73,6 +79,24 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     _stateCtrl.dispose();
     _pincodeCtrl.dispose();
     super.dispose();
+  }
+
+  Future<void> _fetchLoyaltyData() async {
+    try {
+      // Fetch loyalty settings
+      final settingsRes = await DioClient().get('/loyalty/settings');
+      if (settingsRes.data['success'] == true) {
+        setState(() => _loyaltySettings = settingsRes.data['settings']);
+      }
+      // Fetch user's supercoin balance
+      final balanceRes = await DioClient().get('/loyalty/balance');
+      if (balanceRes.data['success'] == true) {
+        setState(() => _supercoinBalance = balanceRes.data['supercoins'] ?? 0);
+      }
+    } catch (e) {
+      // Non-critical, silently fail
+      debugPrint('Loyalty fetch error: $e');
+    }
   }
 
   void _handlePaymentSuccess(PaymentSuccessResponse response) async {
@@ -242,7 +266,15 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     final gstSetting = gstAsync.valueOrNull ?? const GstSetting(percentage: 18.0, isIncluded: true);
     final baseSubtotal = cart.subtotal;
     final gstAmount = baseSubtotal * (gstSetting.percentage / 100);
-    final total = baseSubtotal + gstAmount + cart.shipping - _couponDiscount + (_giftWrap ? 50 : 0);
+
+    // Supercoin discount
+    final maxRedeemPercent = (_loyaltySettings?['max_redemption_percent'] ?? 10).toDouble();
+    final coinValue = (_loyaltySettings?['coin_value'] ?? 1).toDouble();
+    final maxRedeemable = (baseSubtotal * maxRedeemPercent / 100).floor();
+    final effectiveCoins = _useCoins ? (maxRedeemable < _supercoinBalance ? maxRedeemable : _supercoinBalance) : 0;
+    final coinDiscount = effectiveCoins * coinValue;
+
+    final total = baseSubtotal + gstAmount + cart.shipping - _couponDiscount + (_giftWrap ? 50 : 0) - coinDiscount;
 
     try {
       if (_paymentMethod == 'cod') {
@@ -290,6 +322,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
             'shippingCharge': cart.shipping,
             'gstAmount': gstAmount,
             'discount': _couponDiscount,
+            'supercoinsUsed': effectiveCoins,
             'totalAmount': total,
           },
         );
@@ -350,6 +383,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
             'shippingCharge': cart.shipping,
             'gstAmount': gstAmount,
             'discount': _couponDiscount,
+            'supercoinsUsed': effectiveCoins,
             'totalAmount': total,
           },
         );
@@ -367,6 +401,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
           'shippingCharge': cart.shipping,
           'gstAmount': gstAmount,
           'discount': _couponDiscount,
+          'supercoinsUsed': effectiveCoins,
         };
 
         final razorpayKey = orderRes.data['keyId'] ?? 'rzp_test_TDJpb2HvvvomV0';
@@ -519,7 +554,15 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     final gstSetting = gstAsync.valueOrNull ?? const GstSetting(percentage: 18.0, isIncluded: true);
     final baseSubtotal = cart.subtotal;
     final gstAmount = baseSubtotal * (gstSetting.percentage / 100);
-    final total = baseSubtotal + gstAmount + cart.shipping - _couponDiscount + (_giftWrap ? 50 : 0);
+
+    // Supercoin discount in build
+    final maxRedeemPercent = (_loyaltySettings?['max_redemption_percent'] ?? 10).toDouble();
+    final coinValue = (_loyaltySettings?['coin_value'] ?? 1).toDouble();
+    final maxRedeemable = (baseSubtotal * maxRedeemPercent / 100).floor();
+    final effectiveCoins = _useCoins ? (maxRedeemable < _supercoinBalance ? maxRedeemable : _supercoinBalance) : 0;
+    final coinDiscount = effectiveCoins * coinValue;
+
+    final total = baseSubtotal + gstAmount + cart.shipping - _couponDiscount + (_giftWrap ? 50 : 0) - coinDiscount;
 
     return Scaffold(
       backgroundColor: AppColors.bg,
@@ -958,6 +1001,94 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
             style:
                 AppTextStyles.bodyXs.copyWith(color: AppColors.success),
           ),
+        ],
+
+        // Supercoin toggle
+        if (_loyaltySettings != null && _supercoinBalance > 0) ...[
+          const SizedBox(height: 20),
+          Builder(builder: (context) {
+            final baseSubtotal = ref.read(cartProvider).subtotal;
+            final maxRedeemPercent = (_loyaltySettings?['max_redemption_percent'] ?? 10).toDouble();
+            final coinValue = (_loyaltySettings?['coin_value'] ?? 1).toDouble();
+            final maxRedeemable = (baseSubtotal * maxRedeemPercent / 100).floor();
+            final effectiveCoins = _useCoins ? (maxRedeemable < _supercoinBalance ? maxRedeemable : _supercoinBalance) : 0;
+
+            return Container(
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFFFFF7ED), Color(0xFFFEF3C7)],
+                ),
+                borderRadius: BorderRadius.circular(AppTheme.radiusLg),
+                border: Border.all(color: const Color(0xFFFBBF24)),
+              ),
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                children: [
+                  Row(
+                    children: [
+                      const Text('🪙', style: TextStyle(fontSize: 22)),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Use Supercoins',
+                              style: AppTextStyles.bodySm.copyWith(
+                                fontWeight: FontWeight.w700,
+                                color: const Color(0xFF92400E),
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'Balance: $_supercoinBalance coins • Max: $maxRedeemable',
+                              style: AppTextStyles.bodyXs.copyWith(
+                                color: const Color(0xFFB45309),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Switch(
+                        value: _useCoins,
+                        activeColor: const Color(0xFFF59E0B),
+                        onChanged: (v) => setState(() => _useCoins = v),
+                      ),
+                    ],
+                  ),
+                  if (_useCoins && effectiveCoins > 0) ...[
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFDE68A).withOpacity(0.4),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Discount ($effectiveCoins coins)',
+                            style: AppTextStyles.bodyXs.copyWith(
+                              fontWeight: FontWeight.w600,
+                              color: const Color(0xFF92400E),
+                            ),
+                          ),
+                          Text(
+                            '-${Formatters.price((effectiveCoins * coinValue).toDouble())}',
+                            style: AppTextStyles.bodyXs.copyWith(
+                              fontWeight: FontWeight.w700,
+                              color: const Color(0xFF92400E),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            );
+          }),
         ],
 
         const SizedBox(height: 32),

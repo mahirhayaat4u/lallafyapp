@@ -24,6 +24,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmController = TextEditingController();
+  final _referralCodeController = TextEditingController();
 
   bool _showPassword = false;
   bool _showConfirm = false;
@@ -61,6 +62,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
     _emailController.dispose();
     _passwordController.dispose();
     _confirmController.dispose();
+    _referralCodeController.dispose();
     _animController.dispose();
     super.dispose();
   }
@@ -85,6 +87,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
             name: _nameController.text.trim(),
             email: _emailController.text.trim(),
             password: _passwordController.text,
+            referralCode: _referralCodeController.text.trim(),
           );
 
       if (!mounted) return;
@@ -366,6 +369,18 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
                                   ),
                                 ),
 
+                                const SizedBox(height: 20),
+
+                                // Referral Code (Optional)
+                                _CustomFormInput(
+                                  label: 'Referral Code (Optional)',
+                                  hint: 'Enter referral code',
+                                  controller: _referralCodeController,
+                                  textInputAction: TextInputAction.done,
+                                  prefixIcon: Icons.card_giftcard_rounded,
+                                  textCapitalization: TextCapitalization.characters,
+                                ),
+
                                 const SizedBox(height: 24),
 
                                 // Terms & Conditions Checkbox
@@ -580,6 +595,7 @@ class _CustomFormInput extends StatelessWidget {
   final IconData prefixIcon;
   final FormFieldValidator<String>? validator;
   final TextInputAction? textInputAction;
+  final TextCapitalization textCapitalization;
 
   const _CustomFormInput({
     required this.label,
@@ -591,6 +607,7 @@ class _CustomFormInput extends StatelessWidget {
     required this.prefixIcon,
     this.validator,
     this.textInputAction,
+    this.textCapitalization = TextCapitalization.none,
   });
 
   @override
@@ -614,6 +631,7 @@ class _CustomFormInput extends StatelessWidget {
           obscureText: obscureText,
           validator: validator,
           textInputAction: textInputAction,
+          textCapitalization: textCapitalization,
           cursorColor: const Color(0xFFEF476F),
           style: const TextStyle(
             fontFamily: 'Outfit',

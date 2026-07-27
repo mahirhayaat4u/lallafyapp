@@ -141,6 +141,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
     required String name,
     required String email,
     required String password,
+    String? referralCode,
   }) async {
     state = state.copyWith(isLoading: true, clearError: true);
     try {
@@ -148,6 +149,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
         name: name,
         email: email,
         password: password,
+        referralCode: referralCode,
       );
 
       await _client.saveTokens(

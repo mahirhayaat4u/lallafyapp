@@ -8,9 +8,9 @@ class ApiConstants {
   /// Base URL — points to lallafy.com backend
   /// For Android emulator → use http://10.0.2.2:5000/api
   /// For physical device / production → update accordingly
-  // static const String baseUrl = 'http://10.0.2.2:5000/api';
+  static const String baseUrl = 'http://10.0.2.2:5000/api';
   // static const String baseUrl ='http://10.206.218.188/api';
-  static const String baseUrl = 'https://api.lallafy.com/api';
+  // static const String baseUrl = 'https://api.lallafy.com/api';
 
   // ─── Auth ────────────────────────────────────────────────
   static const String login = '/auth/login';
