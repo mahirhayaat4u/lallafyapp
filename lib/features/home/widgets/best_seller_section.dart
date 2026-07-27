@@ -2,19 +2,40 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:video_player/video_player.dart';
-import 'package:visibility_detector/visibility_detector.dart';
 
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/widgets/cached_image.dart';
 import '../../../models/product.dart';
 import '../../../providers/homepage_provider.dart';
 
-/// Best Seller Carousel Section — mirrors BestSellerCarousal.jsx from lallafy.com
-class BestSellerSection extends ConsumerWidget {
+/// Best Seller Carousel Section — centered PageView with only focused card playing video
+class BestSellerSection extends ConsumerStatefulWidget {
   const BestSellerSection({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<BestSellerSection> createState() => _BestSellerSectionState();
+}
+
+class _BestSellerSectionState extends ConsumerState<BestSellerSection> {
+  late PageController _pageController;
+  int _focusedIndex = 0;
+
+  static const double _viewportFraction = 0.72;
+
+  @override
+  void initState() {
+    super.initState();
+    _pageController = PageController(viewportFraction: _viewportFraction);
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final bestSellersAsync = ref.watch(bestSellersProvider);
 
     return bestSellersAsync.when(
@@ -64,19 +85,70 @@ class BestSellerSection extends ConsumerWidget {
               ),
               const SizedBox(height: 16),
 
-              // ── Product Cards Horizontal Scroll ──
+              // ── Centered PageView Carousel ──
               SizedBox(
-                height: 340,
-                child: ListView.separated(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                height: 440,
+                child: PageView.builder(
+                  controller: _pageController,
                   clipBehavior: Clip.none,
+                  onPageChanged: (index) {
+                    setState(() => _focusedIndex = index);
+                  },
                   itemCount: products.length,
-                  separatorBuilder: (_, __) => const SizedBox(width: 16),
                   itemBuilder: (context, index) {
-                    return _buildBestSellerCard(context, products, index);
+                    return AnimatedBuilder(
+                      animation: _pageController,
+                      builder: (context, child) {
+                        double value = 1.0;
+                        if (_pageController.position.haveDimensions) {
+                          value = (_pageController.page ?? 0) - index;
+                          value = (1 - (value.abs() * 0.18)).clamp(0.82, 1.0);
+                        }
+                        final isFocused = index == _focusedIndex;
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 4),
+                          child: Center(
+                            child: AnimatedScale(
+                              scale: value,
+                              duration: const Duration(milliseconds: 250),
+                              curve: Curves.easeOutCubic,
+                              child: AnimatedOpacity(
+                                opacity: isFocused ? 1.0 : 0.6,
+                                duration: const Duration(milliseconds: 250),
+                                child: _BestSellerCard(
+                                  product: products[index],
+                                  isFocused: isFocused,
+                                  onTap: () => _showVideoModal(context, products, index),
+                                ),
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    );
                   },
                 ),
+              ),
+
+              // ── Page Dots ──
+              const SizedBox(height: 8),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: List.generate(products.length, (i) {
+                  final isActive = i == _focusedIndex;
+                  return AnimatedContainer(
+                    duration: const Duration(milliseconds: 250),
+                    margin: const EdgeInsets.symmetric(horizontal: 3),
+                    width: isActive ? 20 : 6,
+                    height: 6,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(3),
+                      color: isActive
+                          ? const Color(0xFFFF448C)
+                          : Colors.grey.shade300,
+                    ),
+                  );
+                }),
               ),
             ],
           ),
@@ -84,185 +156,6 @@ class BestSellerSection extends ConsumerWidget {
       },
       loading: () => const SizedBox.shrink(),
       error: (_, __) => const SizedBox.shrink(),
-    );
-  }
-
-  Widget _buildBestSellerCard(BuildContext context, List<Product> products, int index) {
-    final product = products[index];
-    final imageUrl = product.images.isNotEmpty ? product.images.first : '';
-    final hasVideo = product.bestSellerVideo != null && product.bestSellerVideo!.isNotEmpty;
-
-    return GestureDetector(
-      onTap: () {
-        _showVideoModal(context, products, index);
-      },
-      child: Container(
-        width: 210,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(22),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.06),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        clipBehavior: Clip.antiAlias,
-        child: Column(
-          children: [
-            // Top Media / Video / Image Area with Best Seller Badge
-            SizedBox(
-              height: 240,
-              width: double.infinity,
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  // Product Video or Main Image (Auto-plays by default)
-                  if (hasVideo)
-                    _AutoLoopVideoPlayer(
-                      videoUrl: product.bestSellerVideo!,
-                      fallbackImageUrl: imageUrl,
-                    )
-                  else
-                    CachedImage(
-                      imageUrl: imageUrl,
-                      fit: BoxFit.cover,
-                    ),
-
-                  // "BEST SELLER" Badge top left
-                  Positioned(
-                    top: 10,
-                    left: 10,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFF448C),
-                        borderRadius: BorderRadius.circular(12),
-                        boxShadow: [
-                          BoxShadow(
-                            color: const Color(0xFFFF448C).withOpacity(0.3),
-                            blurRadius: 6,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: const Text(
-                        'BEST SELLER',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 9,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: 0.6,
-                        ),
-                      ),
-                    ),
-                  ),
-
-                  // Play Icon Indicator if video is present
-                  if (hasVideo)
-                    Positioned(
-                      top: 10,
-                      right: 10,
-                      child: Container(
-                        padding: const EdgeInsets.all(6),
-                        decoration: BoxDecoration(
-                          color: Colors.black.withOpacity(0.5),
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(
-                          Icons.play_arrow_rounded,
-                          color: Colors.white,
-                          size: 16,
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-            ),
-
-            // Circular Thumbnail on the divider
-            Transform.translate(
-              offset: const Offset(0, -22),
-              child: Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white, width: 3),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.08),
-                      blurRadius: 8,
-                      offset: const Offset(0, 3),
-                    ),
-                  ],
-                ),
-                child: ClipOval(
-                  child: CachedImage(
-                    imageUrl: imageUrl,
-                    fit: BoxFit.cover,
-                  ),
-                ),
-              ),
-            ),
-
-            // Title & Price Section
-            Transform.translate(
-              offset: const Offset(0, -18),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                child: Column(
-                  children: [
-                    Text(
-                      product.name,
-                      style: const TextStyle(
-                        fontFamily: 'Outfit',
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                        color: Color(0xFF1A1C23),
-                      ),
-                      textAlign: TextAlign.center,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 4),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          '₹${product.price.toStringAsFixed(0)}',
-                          style: const TextStyle(
-                            fontFamily: 'Outfit',
-                            fontSize: 15,
-                            fontWeight: FontWeight.w900,
-                            color: Color(0xFF1A1C23),
-                          ),
-                        ),
-                        if (product.originalPrice > product.price) ...[
-                          const SizedBox(width: 6),
-                          Text(
-                            '₹${product.originalPrice.toStringAsFixed(0)}',
-                            style: TextStyle(
-                              fontFamily: 'Outfit',
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.grey.shade400,
-                              decoration: TextDecoration.lineThrough,
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 
@@ -281,16 +174,178 @@ class BestSellerSection extends ConsumerWidget {
   }
 }
 
-/// Auto-playing muted looping video player widget for Bestseller product clips.
-/// Uses VisibilityDetector to only initialize & play when the card is visible,
-/// preventing Android MediaCodec exhaustion (max ~3-6 concurrent HW decoders).
+// ─────────────────────────────────────────────────────────────────────────────
+// Best Seller Card (9:16 Vertical Ratio + Clean Drop Shadow)
+// ─────────────────────────────────────────────────────────────────────────────
+class _BestSellerCard extends StatelessWidget {
+  final Product product;
+  final bool isFocused;
+  final VoidCallback onTap;
+
+  const _BestSellerCard({
+    required this.product,
+    required this.isFocused,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final imageUrl = product.images.isNotEmpty ? product.images.first : '';
+    final hasVideo = product.bestSellerVideo != null &&
+        product.bestSellerVideo!.isNotEmpty;
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(isFocused ? 0.14 : 0.05),
+              blurRadius: isFocused ? 18 : 10,
+              spreadRadius: isFocused ? 1 : 0,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Column(
+          children: [
+            // Vertical 9:16 Video / Image Area (Expands dynamically)
+            Expanded(
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  if (hasVideo)
+                    _AutoLoopVideoPlayer(
+                      videoUrl: product.bestSellerVideo!,
+                      fallbackImageUrl: imageUrl,
+                      isFocused: isFocused,
+                    )
+                  else
+                    CachedImage(imageUrl: imageUrl, fit: BoxFit.cover),
+
+                  // BEST SELLER badge
+                  Positioned(
+                    top: 12,
+                    left: 12,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFF448C),
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFFFF448C).withOpacity(0.35),
+                            blurRadius: 6,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: const Text(
+                        'BEST SELLER',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 9,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 0.6,
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  // Play icon (top right)
+                  if (hasVideo)
+                    Positioned(
+                      top: 12,
+                      right: 12,
+                      child: Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withOpacity(0.55),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.play_arrow_rounded,
+                          color: Colors.white,
+                          size: 16,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+
+            // Product Info Bottom
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    product.name,
+                    style: const TextStyle(
+                      fontFamily: 'Outfit',
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF1A1C23),
+                    ),
+                    textAlign: TextAlign.center,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 3),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        '₹${product.price.toStringAsFixed(0)}',
+                        style: const TextStyle(
+                          fontFamily: 'Outfit',
+                          fontSize: 15,
+                          fontWeight: FontWeight.w900,
+                          color: Color(0xFFFF448C),
+                        ),
+                      ),
+                      if (product.originalPrice > product.price) ...[
+                        const SizedBox(width: 6),
+                        Text(
+                          '₹${product.originalPrice.toStringAsFixed(0)}',
+                          style: TextStyle(
+                            fontFamily: 'Outfit',
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.grey.shade400,
+                            decoration: TextDecoration.lineThrough,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Auto-playing muted looping video — only plays when isFocused == true
+// ─────────────────────────────────────────────────────────────────────────────
 class _AutoLoopVideoPlayer extends StatefulWidget {
   final String videoUrl;
   final String fallbackImageUrl;
+  final bool isFocused;
 
   const _AutoLoopVideoPlayer({
     required this.videoUrl,
     required this.fallbackImageUrl,
+    required this.isFocused,
   });
 
   @override
@@ -301,25 +356,40 @@ class _AutoLoopVideoPlayerState extends State<_AutoLoopVideoPlayer>
     with WidgetsBindingObserver {
   VideoPlayerController? _controller;
   bool _isInitialized = false;
-  bool _isVisible = false;
   bool _isDisposing = false;
-
-  /// Unique key for VisibilityDetector — use the video URL hash
-  late final Key _visibilityKey = ValueKey('bs_video_${widget.videoUrl.hashCode}');
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    if (widget.isFocused) {
+      _initVideo();
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant _AutoLoopVideoPlayer oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.isFocused && !oldWidget.isFocused) {
+      // Became focused → init & play
+      if (_controller == null) {
+        _initVideo();
+      } else if (_isInitialized) {
+        _controller!.play();
+      }
+    } else if (!widget.isFocused && oldWidget.isFocused) {
+      // Lost focus → release controller to free decoder slot
+      _releaseVideo();
+      if (mounted) setState(() {});
+    }
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    // Pause when app goes to background, resume when it comes back
     if (state == AppLifecycleState.paused ||
         state == AppLifecycleState.inactive) {
       _controller?.pause();
-    } else if (state == AppLifecycleState.resumed && _isVisible) {
+    } else if (state == AppLifecycleState.resumed && widget.isFocused) {
       _controller?.play();
     }
   }
@@ -343,7 +413,9 @@ class _AutoLoopVideoPlayerState extends State<_AutoLoopVideoPlayer>
 
       await controller.setVolume(0);
       await controller.setLooping(true);
-      await controller.play();
+      if (widget.isFocused) {
+        await controller.play();
+      }
 
       if (mounted && !_isDisposing) {
         setState(() => _isInitialized = true);
@@ -363,19 +435,6 @@ class _AutoLoopVideoPlayerState extends State<_AutoLoopVideoPlayer>
     }
   }
 
-  void _onVisibilityChanged(VisibilityInfo info) {
-    final visible = info.visibleFraction > 0.3; // At least 30% visible
-    if (visible == _isVisible) return;
-    _isVisible = visible;
-
-    if (visible) {
-      _initVideo();
-    } else {
-      _releaseVideo();
-      if (mounted) setState(() {});
-    }
-  }
-
   @override
   void dispose() {
     _isDisposing = true;
@@ -387,27 +446,24 @@ class _AutoLoopVideoPlayerState extends State<_AutoLoopVideoPlayer>
 
   @override
   Widget build(BuildContext context) {
-    return VisibilityDetector(
-      key: _visibilityKey,
-      onVisibilityChanged: _onVisibilityChanged,
-      child: _isInitialized &&
-              _controller != null &&
-              _controller!.value.isInitialized
-          ? SizedBox.expand(
-              child: FittedBox(
-                fit: BoxFit.cover,
-                clipBehavior: Clip.antiAlias,
-                child: SizedBox(
-                  width: _controller!.value.size.width,
-                  height: _controller!.value.size.height,
-                  child: VideoPlayer(_controller!),
-                ),
-              ),
-            )
-          : CachedImage(
-              imageUrl: widget.fallbackImageUrl,
-              fit: BoxFit.cover,
-            ),
+    if (_isInitialized &&
+        _controller != null &&
+        _controller!.value.isInitialized) {
+      return SizedBox.expand(
+        child: FittedBox(
+          fit: BoxFit.cover,
+          clipBehavior: Clip.antiAlias,
+          child: SizedBox(
+            width: _controller!.value.size.width,
+            height: _controller!.value.size.height,
+            child: VideoPlayer(_controller!),
+          ),
+        ),
+      );
+    }
+    return CachedImage(
+      imageUrl: widget.fallbackImageUrl,
+      fit: BoxFit.cover,
     );
   }
 }
