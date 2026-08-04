@@ -74,8 +74,20 @@ class ProductDetailScreen extends ConsumerStatefulWidget {
 }
 
 class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
+  final GlobalKey _reviewsKey = GlobalKey();
   int _activeImageIndex = 0;
   int _qty = 1;
+
+  void _scrollToReviews() {
+    final ctx = _reviewsKey.currentContext;
+    if (ctx != null) {
+      Scrollable.ensureVisible(
+        ctx,
+        duration: const Duration(milliseconds: 600),
+        curve: Curves.easeInOutCubic,
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -181,23 +193,30 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                   ),
                   const SizedBox(height: 8),
 
-                  // Rating
+                  // Rating (Tappable to smooth-scroll down to Customer Reviews)
                   if (product.rating > 0)
-                    Row(
-                      children: [
-                        RatingStars(
-                          rating: product.rating,
-                          size: 16,
-                          showCount: true,
-                          reviewCount: product.reviewCount,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          '· ${product.reviewCount} reviews',
-                          style: AppTextStyles.bodyXs
-                              .copyWith(color: AppColors.textMuted),
-                        ),
-                      ],
+                    GestureDetector(
+                      onTap: _scrollToReviews,
+                      behavior: HitTestBehavior.opaque,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          RatingStars(
+                            rating: product.rating,
+                            size: 16,
+                            showCount: true,
+                            reviewCount: product.reviewCount,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            '· ${product.reviewCount} reviews',
+                            style: AppTextStyles.bodyXs.copyWith(
+                              color: AppColors.textMuted,
+                              decoration: TextDecoration.underline,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   const SizedBox(height: 16),
 
@@ -251,15 +270,9 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                   const SizedBox(height: 16),
 
                   // Description
-                  if (product.description != null) ...[
-                    Text(
-                      product.description!,
-                      style: AppTextStyles.body.copyWith(
-                        color: AppColors.textMuted,
-                        height: 1.7,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
+                  if (product.description != null &&
+                      product.description!.trim().isNotEmpty) ...[
+                    _buildDescription(product.description!),
                   ],
 
                   const Divider(color: AppColors.border),
@@ -275,6 +288,10 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                       _buildQtyStepper(product),
                     ],
                   ),
+                  const SizedBox(height: 20),
+
+                  // Saved Delivery Address Bar with Change option
+                  _DeliveryAddressSection(product: product),
                   const SizedBox(height: 24),
 
                   const SizedBox(height: 16),
@@ -454,164 +471,169 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
         bottom: false,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          child: Row(
+          child: Stack(
+            alignment: Alignment.center,
             children: [
-              // Square rounded Back button
-              GestureDetector(
-                onTap: () {
-                  if (context.canPop()) {
-                    context.pop();
-                  } else {
-                    context.go('/home');
-                  }
-                },
-                child: Container(
-                  width: 40,
+              // Centered Brand Logo (absolute center, independent of buttons)
+              Center(
+                child: Image.asset(
+                  'assets/images/lallafy.png',
                   height: 40,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(14),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.04),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
+                  fit: BoxFit.contain,
+                  errorBuilder: (context, error, stackTrace) {
+                    return const Text(
+                      'Lallafy',
+                      style: TextStyle(
+                        fontFamily: 'Outfit',
+                        fontSize: 22,
+                        fontWeight: FontWeight.w900,
+                        color: Color(0xFFFF448C),
                       ),
-                    ],
-                  ),
-                  alignment: Alignment.center,
-                  child: const Icon(
-                    Icons.chevron_left_rounded,
-                    color: Color(0xFF1F2937),
-                    size: 24,
-                  ),
+                    );
+                  },
                 ),
               ),
 
-              // Centered Brand Logo
-              Expanded(
-                child: Center(
-                  child: Image.asset(
-                    'assets/images/lallafy.png',
+              // Left: Back button
+              Positioned(
+                left: 0,
+                child: GestureDetector(
+                  onTap: () {
+                    if (context.canPop()) {
+                      context.pop();
+                    } else {
+                      context.go('/home');
+                    }
+                  },
+                  child: Container(
+                    width: 40,
                     height: 40,
-                    fit: BoxFit.contain,
-                    errorBuilder: (context, error, stackTrace) {
-                      return const Text(
-                        'Lallafy',
-                        style: TextStyle(
-                          fontFamily: 'Outfit',
-                          fontSize: 22,
-                          fontWeight: FontWeight.w900,
-                          color: Color(0xFFFF448C),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(14),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.04),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
                         ),
-                      );
-                    },
+                      ],
+                    ),
+                    alignment: Alignment.center,
+                    child: const Icon(
+                      Icons.chevron_left_rounded,
+                      color: Color(0xFF1F2937),
+                      size: 24,
+                    ),
                   ),
                 ),
               ),
 
-              // Right Actions: Wishlist, Cart with Badge, Share
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Wishlist Icon
-                  IconButton(
-                    onPressed: () {
-                      final auth = ref.read(authProvider);
-                      if (!auth.isAuthenticated) {
+              // Right: Wishlist, Cart with Badge, Share
+              Positioned(
+                right: 0,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Wishlist Icon
+                    IconButton(
+                      onPressed: () {
+                        final auth = ref.read(authProvider);
+                        if (!auth.isAuthenticated) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Please login to add to wishlist'),
+                              backgroundColor: Colors.orange,
+                            ),
+                          );
+                          context.push('/login');
+                          return;
+                        }
+                        ref.read(wishlistProvider.notifier).toggle(product);
+                        ScaffoldMessenger.of(context).clearSnackBars();
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Please login to add to wishlist'),
-                            backgroundColor: Colors.orange,
+                          SnackBar(
+                            content: Text(
+                              isWishlisted
+                                  ? '${product.name} removed from wishlist'
+                                  : '${product.name} added to wishlist ❤️',
+                            ),
+                            backgroundColor: isWishlisted
+                                ? Colors.grey
+                                : const Color(0xFFFF448C),
+                            duration: const Duration(seconds: 1),
+                            behavior: SnackBarBehavior.floating,
                           ),
                         );
-                        context.push('/login');
-                        return;
-                      }
-                      ref.read(wishlistProvider.notifier).toggle(product);
-                      ScaffoldMessenger.of(context).clearSnackBars();
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            isWishlisted
-                                ? '${product.name} removed from wishlist'
-                                : '${product.name} added to wishlist ❤️',
-                          ),
-                          backgroundColor: isWishlisted
-                              ? Colors.grey
-                              : const Color(0xFFFF448C),
-                          duration: const Duration(seconds: 1),
-                          behavior: SnackBarBehavior.floating,
-                        ),
-                      );
-                    },
-                    icon: Icon(
-                      isWishlisted
-                          ? Icons.favorite_rounded
-                          : Icons.favorite_border_rounded,
-                      color: isWishlisted
-                          ? const Color(0xFFFF448C)
-                          : const Color(0xFF1F2937),
-                      size: 22,
-                    ),
-                  ),
-
-                  // Cart Icon with Badge Counter
-                  Stack(
-                    alignment: Alignment.center,
-                    clipBehavior: Clip.none,
-                    children: [
-                      IconButton(
-                        onPressed: () => context.push('/cart'),
-                        icon: const Icon(
-                          Icons.shopping_cart_outlined,
-                          color: Color(0xFF1F2937),
-                          size: 22,
-                        ),
+                      },
+                      icon: Icon(
+                        isWishlisted
+                            ? Icons.favorite_rounded
+                            : Icons.favorite_border_rounded,
+                        color: isWishlisted
+                            ? const Color(0xFFFF448C)
+                            : const Color(0xFF1F2937),
+                        size: 22,
                       ),
-                      if (itemCount > 0)
-                        Positioned(
-                          top: 4,
-                          right: 4,
-                          child: Container(
-                            padding: const EdgeInsets.all(4),
-                            decoration: const BoxDecoration(
-                              color: Color(0xFFFF448C),
-                              shape: BoxShape.circle,
-                            ),
-                            constraints: const BoxConstraints(
-                              minWidth: 16,
-                              minHeight: 16,
-                            ),
-                            child: Text(
-                              '$itemCount',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 9,
-                                fontWeight: FontWeight.bold,
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
+                    ),
+
+                    // Cart Icon with Badge Counter
+                    Stack(
+                      alignment: Alignment.center,
+                      clipBehavior: Clip.none,
+                      children: [
+                        IconButton(
+                          onPressed: () => context.push('/cart'),
+                          icon: const Icon(
+                            Icons.shopping_cart_outlined,
+                            color: Color(0xFF1F2937),
+                            size: 22,
                           ),
                         ),
-                    ],
-                  ),
-
-                  // Share Icon
-                  IconButton(
-                    onPressed: () {
-                      Share.share(
-                        'Check out ${product.name} on Lallafy!\n\nhttps://lallafy.com/product/${product.slug ?? product.id}',
-                        subject: 'Share Product',
-                      );
-                    },
-                    icon: const Icon(
-                      Icons.share_outlined,
-                      color: Color(0xFF1F2937),
-                      size: 21,
+                        if (itemCount > 0)
+                          Positioned(
+                            top: 4,
+                            right: 4,
+                            child: Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: const BoxDecoration(
+                                color: Color(0xFFFF448C),
+                                shape: BoxShape.circle,
+                              ),
+                              constraints: const BoxConstraints(
+                                minWidth: 16,
+                                minHeight: 16,
+                              ),
+                              child: Text(
+                                '$itemCount',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                          ),
+                      ],
                     ),
-                  ),
-                ],
+
+                    // Share Icon
+                    IconButton(
+                      onPressed: () {
+                        Share.share(
+                          'Check out ${product.name} on Lallafy!\n\nhttps://lallafy.com/product/${product.slug ?? product.id}',
+                          subject: 'Share Product',
+                        );
+                      },
+                      icon: const Icon(
+                        Icons.share_outlined,
+                        color: Color(0xFF1F2937),
+                        size: 21,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
@@ -879,6 +901,42 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
     );
   }
 
+  /// Product Description Section — renders rich HTML formatting (bold, lists, colors, headers)
+  Widget _buildDescription(String rawDescription) {
+    if (rawDescription.trim().isEmpty) return const SizedBox.shrink();
+
+    final hasHtml = RegExp(r'<[a-z][\s\S]*>', caseSensitive: false).hasMatch(rawDescription);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Product Description',
+          style: TextStyle(
+            fontFamily: 'Outfit',
+            fontSize: 16,
+            fontWeight: FontWeight.w700,
+            color: Color(0xFF111827),
+          ),
+        ),
+        const SizedBox(height: 8),
+        hasHtml
+            ? _HtmlContentRenderer(htmlContent: rawDescription)
+            : Text(
+                rawDescription.trim(),
+                style: const TextStyle(
+                  fontFamily: 'Outfit',
+                  fontSize: 13.5,
+                  fontWeight: FontWeight.w400,
+                  color: Color(0xFF4B5563),
+                  height: 1.6,
+                ),
+              ),
+        const SizedBox(height: 16),
+      ],
+    );
+  }
+
   /// Specifications list
   Widget _buildSpecifications(Product product) {
     return Container(
@@ -975,6 +1033,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
     final reviewsAsync = ref.watch(productReviewsProvider(product.id));
 
     return Container(
+      key: _reviewsKey,
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -1070,8 +1129,69 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                 );
               }
 
+              final allReviewImages = reviews.expand((r) => r.images).toList();
+
               return Column(
-                children: reviews.map((rev) => _buildReviewCard(rev)).toList(),
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Customer Photos Strip (if any review images exist)
+                  if (allReviewImages.isNotEmpty) ...[
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Customer Photos (${allReviewImages.length})',
+                          style: const TextStyle(
+                            fontFamily: 'Outfit',
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF1F2937),
+                          ),
+                        ),
+                        GestureDetector(
+                          onTap: () => _openImageGalleryModal(context, allReviewImages, 0),
+                          child: const Text(
+                            'View All →',
+                            style: TextStyle(
+                              fontFamily: 'Outfit',
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.w700,
+                              color: Color(0xFFFF448C),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    SizedBox(
+                      height: 70,
+                      child: ListView.separated(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: allReviewImages.length,
+                        separatorBuilder: (_, __) => const SizedBox(width: 8),
+                        itemBuilder: (context, idx) {
+                          return GestureDetector(
+                            onTap: () => _openImageGalleryModal(context, allReviewImages, idx),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(10),
+                              child: CachedImage(
+                                imageUrl: allReviewImages[idx],
+                                width: 70,
+                                height: 70,
+                                fit: BoxFit.cover,
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    const Divider(color: Color(0xFFF3F4F6), height: 1),
+                    const SizedBox(height: 16),
+                  ],
+
+                  ...reviews.map((rev) => _buildReviewCard(rev, allReviewImages)).toList(),
+                ],
               );
             },
             loading: () => const Center(
@@ -1088,7 +1208,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
   }
 
   /// Single Customer Review Card
-  Widget _buildReviewCard(Review review) {
+  Widget _buildReviewCard(Review review, List<String> allReviewImages) {
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
       padding: const EdgeInsets.all(14),
@@ -1198,15 +1318,24 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                 scrollDirection: Axis.horizontal,
                 itemCount: review.images.length,
                 separatorBuilder: (_, __) => const SizedBox(width: 8),
-                itemBuilder: (context, idx) => ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: CachedImage(
-                    imageUrl: review.images[idx],
-                    width: 60,
-                    height: 60,
-                    fit: BoxFit.cover,
-                  ),
-                ),
+                itemBuilder: (context, idx) {
+                  final targetList = allReviewImages.isNotEmpty ? allReviewImages : review.images;
+                  final startIdx = targetList.contains(review.images[idx])
+                      ? targetList.indexOf(review.images[idx])
+                      : idx;
+                  return GestureDetector(
+                    onTap: () => _openImageGalleryModal(context, targetList, startIdx),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: CachedImage(
+                        imageUrl: review.images[idx],
+                        width: 60,
+                        height: 60,
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                  );
+                },
               ),
             ),
           ],
@@ -1269,6 +1398,23 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
       ],
     );
   }
+
+  void _openImageGalleryModal(
+    BuildContext context,
+    List<String> images,
+    int initialIndex,
+  ) {
+    if (images.isEmpty) return;
+
+    showDialog(
+      context: context,
+      useSafeArea: false,
+      builder: (context) => _ImageGalleryViewer(
+        images: images,
+        initialIndex: initialIndex,
+      ),
+    );
+  }
 }
 
 /// Persistent header delegate for keeping top navigation sticky on scroll
@@ -1295,3 +1441,599 @@ class _StickyHeaderDelegate extends SliverPersistentHeaderDelegate {
     return oldDelegate.child != child || oldDelegate.topPadding != topPadding;
   }
 }
+
+/// Fullscreen Swipeable Customer Photo Gallery Viewer
+class _ImageGalleryViewer extends StatefulWidget {
+  final List<String> images;
+  final int initialIndex;
+
+  const _ImageGalleryViewer({
+    required this.images,
+    required this.initialIndex,
+  });
+
+  @override
+  State<_ImageGalleryViewer> createState() => _ImageGalleryViewerState();
+}
+
+class _ImageGalleryViewerState extends State<_ImageGalleryViewer> {
+  late PageController _pageController;
+  late int _currentIndex;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentIndex = widget.initialIndex;
+    _pageController = PageController(initialPage: widget.initialIndex);
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: SafeArea(
+        child: Stack(
+          children: [
+            // Swipeable Fullscreen Image PageView
+            PageView.builder(
+              controller: _pageController,
+              itemCount: widget.images.length,
+              onPageChanged: (index) {
+                setState(() => _currentIndex = index);
+              },
+              itemBuilder: (context, index) {
+                return InteractiveViewer(
+                  minScale: 0.8,
+                  maxScale: 4.0,
+                  child: Center(
+                    child: CachedImage(
+                      imageUrl: widget.images[index],
+                      fit: BoxFit.contain,
+                      width: double.infinity,
+                      height: double.infinity,
+                    ),
+                  ),
+                );
+              },
+            ),
+
+            // Top Header: Close Button & Image Counter
+            Positioned(
+              top: 10,
+              left: 16,
+              right: 16,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  // Counter Badge
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      '${_currentIndex + 1} / ${widget.images.length}',
+                      style: const TextStyle(
+                        fontFamily: 'Outfit',
+                        color: Colors.white,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+
+                  // Close Button
+                  GestureDetector(
+                    onTap: () => Navigator.of(context).pop(),
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.2),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.close_rounded,
+                        color: Colors.white,
+                        size: 22,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // Bottom Thumbnail Selector Bar
+            if (widget.images.length > 1)
+              Positioned(
+                bottom: 20,
+                left: 0,
+                right: 0,
+                child: SizedBox(
+                  height: 60,
+                  child: ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    itemCount: widget.images.length,
+                    separatorBuilder: (_, __) => const SizedBox(width: 8),
+                    itemBuilder: (context, idx) {
+                      final isSelected = idx == _currentIndex;
+                      return GestureDetector(
+                        onTap: () {
+                          _pageController.animateToPage(
+                            idx,
+                            duration: const Duration(milliseconds: 300),
+                            curve: Curves.easeInOut,
+                          );
+                        },
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(
+                              color: isSelected ? const Color(0xFFFF448C) : Colors.transparent,
+                              width: 2.5,
+                            ),
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: CachedImage(
+                              imageUrl: widget.images[idx],
+                              width: 50,
+                              height: 50,
+                              fit: BoxFit.cover,
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// ─────────────────────────────────────────────────────────────────────────────
+/// SAVED DELIVERY ADDRESS WIDGET WITH CHANGE OPTION
+/// ─────────────────────────────────────────────────────────────────────────────
+class _DeliveryAddressSection extends ConsumerStatefulWidget {
+  final Product product;
+
+  const _DeliveryAddressSection({required this.product});
+
+  @override
+  ConsumerState<_DeliveryAddressSection> createState() =>
+      __DeliveryAddressSectionState();
+}
+
+class __DeliveryAddressSectionState
+    extends ConsumerState<_DeliveryAddressSection> {
+  bool _loading = false;
+  Map<String, dynamic>? _selectedAddress;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserDefaultAddress();
+  }
+
+  Future<void> _loadUserDefaultAddress() async {
+    final auth = ref.read(authProvider);
+    if (!auth.isAuthenticated) return;
+
+    setState(() => _loading = true);
+    try {
+      final res = await DioClient().get(ApiConstants.addresses);
+      final data = res.data;
+      List<dynamic> addresses = [];
+      if (data is List) {
+        addresses = data;
+      } else if (data is Map) {
+        addresses = data['addresses'] ??
+            (data['data'] is Map ? data['data']['addresses'] : null) ??
+            data['data'] ??
+            [];
+      }
+      if (addresses.isNotEmpty) {
+        final defaultAddr = addresses.firstWhere(
+          (a) => a['isDefault'] == true || a['default'] == true,
+          orElse: () => addresses.first,
+        );
+        if (mounted) {
+          setState(() {
+            _selectedAddress = Map<String, dynamic>.from(defaultAddr as Map);
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint('Address fetch error: $e');
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _onChangeAddress() async {
+    final auth = ref.read(authProvider);
+    if (!auth.isAuthenticated) {
+      context.push('/login');
+      return;
+    }
+
+    await context.push('/addresses');
+    _loadUserDefaultAddress();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final name = _selectedAddress?['name'] ?? '';
+    final city = _selectedAddress?['city'] ?? '';
+    final pincode = _selectedAddress?['pincode']?.toString() ??
+        _selectedAddress?['zip']?.toString() ??
+        '';
+    final line1 = _selectedAddress?['address'] ??
+        _selectedAddress?['line1'] ??
+        '';
+    final hasAddress = pincode.isNotEmpty || city.isNotEmpty;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF7F9),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFFFD8E4)),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFE3EC),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Icon(
+              Icons.location_on_rounded,
+              color: Color(0xFFE91E63),
+              size: 20,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: _loading
+                ? const Text(
+                    'Loading delivery address...',
+                    style: TextStyle(fontSize: 12, color: AppColors.textMuted),
+                  )
+                : Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        hasAddress
+                            ? 'Deliver to: ${name.isNotEmpty ? name : 'User'} - $pincode'
+                            : 'Select Delivery Address',
+                        style: AppTextStyles.bodySm.copyWith(
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.text,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        hasAddress
+                            ? (line1.isNotEmpty ? '$line1, $city' : city)
+                            : 'Add or select saved address for delivery',
+                        style: AppTextStyles.bodyXs.copyWith(
+                          color: AppColors.textMuted,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+          ),
+          const SizedBox(width: 8),
+          OutlinedButton(
+            onPressed: _onChangeAddress,
+            style: OutlinedButton.styleFrom(
+              foregroundColor: const Color(0xFFE91E63),
+              side: const BorderSide(color: Color(0xFFE91E63), width: 1),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              minimumSize: Size.zero,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            child: Text(
+              hasAddress ? 'CHANGE' : 'ADD',
+              style: const TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 0.5,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// ─────────────────────────────────────────────────────────────────────────────
+/// RICH HTML CONTENT RENDERER WIDGET FOR FLUTTER
+/// ─────────────────────────────────────────────────────────────────────────────
+class _HtmlContentRenderer extends StatelessWidget {
+  final String htmlContent;
+
+  const _HtmlContentRenderer({required this.htmlContent});
+
+  @override
+  Widget build(BuildContext context) {
+    final blocks = _parseHtmlBlocks(htmlContent);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: blocks.map((block) {
+        if (block.type == _BlockType.heading) {
+          return Padding(
+            padding: const EdgeInsets.only(top: 10, bottom: 4),
+            child: RichText(
+              text: TextSpan(
+                children: _parseInlineSpans(
+                  block.text,
+                  baseStyle: TextStyle(
+                    fontFamily: 'Outfit',
+                    fontSize: block.level == 1 ? 19 : (block.level == 2 ? 17 : 15),
+                    fontWeight: FontWeight.bold,
+                    color: const Color(0xFF111827),
+                  ),
+                ),
+              ),
+            ),
+          );
+        } else if (block.type == _BlockType.listItem) {
+          return Padding(
+            padding: const EdgeInsets.only(left: 4, top: 3, bottom: 3),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  block.bulletPrefix ?? '• ',
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFFFF448C),
+                  ),
+                ),
+                Expanded(
+                  child: RichText(
+                    text: TextSpan(
+                      children: _parseInlineSpans(
+                        block.text,
+                        baseStyle: const TextStyle(
+                          fontFamily: 'Outfit',
+                          fontSize: 13.5,
+                          color: Color(0xFF374151),
+                          height: 1.5,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        } else if (block.type == _BlockType.blockquote) {
+          return Container(
+            margin: const EdgeInsets.symmetric(vertical: 6),
+            padding: const EdgeInsets.all(10),
+            decoration: const BoxDecoration(
+              color: Color(0xFFFFF0F5),
+              border: Border(left: BorderSide(color: Color(0xFFFF448C), width: 3)),
+            ),
+            child: RichText(
+              text: TextSpan(
+                children: _parseInlineSpans(
+                  block.text,
+                  baseStyle: const TextStyle(
+                    fontFamily: 'Outfit',
+                    fontSize: 13.5,
+                    fontStyle: FontStyle.italic,
+                    color: Color(0xFF374151),
+                  ),
+                ),
+              ),
+            ),
+          );
+        } else {
+          if (block.text.trim().isEmpty) return const SizedBox(height: 4);
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 6),
+            child: RichText(
+              text: TextSpan(
+                children: _parseInlineSpans(
+                  block.text,
+                  baseStyle: const TextStyle(
+                    fontFamily: 'Outfit',
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w400,
+                    color: Color(0xFF4B5563),
+                    height: 1.6,
+                  ),
+                ),
+              ),
+            ),
+          );
+        }
+      }).toList(),
+    );
+  }
+
+  List<_HtmlBlock> _parseHtmlBlocks(String html) {
+    List<_HtmlBlock> blocks = [];
+
+    String clean = html.replaceAll(RegExp(r'<br\s*/?>', caseSensitive: false), '\n');
+
+    final regex = RegExp(
+      r'<(h[1-6]|p|blockquote|ul|ol|li)[^>]*>(.*?)</\1>',
+      caseSensitive: false,
+      dotAll: true,
+    );
+
+    final matches = regex.allMatches(clean);
+
+    if (matches.isEmpty) {
+      final lines = clean.split('\n');
+      for (var l in lines) {
+        if (l.trim().isNotEmpty) {
+          blocks.add(_HtmlBlock(type: _BlockType.paragraph, text: l));
+        }
+      }
+      return blocks;
+    }
+
+    for (final match in matches) {
+      final tag = match.group(1)!.toLowerCase();
+      final content = match.group(2) ?? '';
+
+      if (tag.startsWith('h')) {
+        final level = int.tryParse(tag.substring(1)) ?? 2;
+        blocks.add(_HtmlBlock(type: _BlockType.heading, text: content, level: level));
+      } else if (tag == 'blockquote') {
+        blocks.add(_HtmlBlock(type: _BlockType.blockquote, text: content));
+      } else if (tag == 'ul') {
+        final liRegex = RegExp(r'<li[^>]*>(.*?)</li\s*>', caseSensitive: false, dotAll: true);
+        final liMatches = liRegex.allMatches(content);
+        for (final li in liMatches) {
+          blocks.add(_HtmlBlock(type: _BlockType.listItem, text: li.group(1) ?? '', bulletPrefix: '• '));
+        }
+      } else if (tag == 'ol') {
+        final liRegex = RegExp(r'<li[^>]*>(.*?)</li\s*>', caseSensitive: false, dotAll: true);
+        final liMatches = liRegex.allMatches(content);
+        int idx = 1;
+        for (final li in liMatches) {
+          blocks.add(_HtmlBlock(type: _BlockType.listItem, text: li.group(1) ?? '', bulletPrefix: '${idx++}. '));
+        }
+      } else if (tag == 'li') {
+        blocks.add(_HtmlBlock(type: _BlockType.listItem, text: content, bulletPrefix: '• '));
+      } else {
+        blocks.add(_HtmlBlock(type: _BlockType.paragraph, text: content));
+      }
+    }
+
+    return blocks;
+  }
+
+  List<TextSpan> _parseInlineSpans(String text, {required TextStyle baseStyle}) {
+    List<TextSpan> spans = [];
+
+    final tagRegex = RegExp(
+      r'<(b|strong|i|em|u|s|strike|span)[^>]*>(.*?)</\1>|([^<]+)',
+      caseSensitive: false,
+      dotAll: true,
+    );
+
+    final matches = tagRegex.allMatches(text);
+
+    if (matches.isEmpty) {
+      spans.add(TextSpan(text: _stripTags(text), style: baseStyle));
+      return spans;
+    }
+
+    for (final match in matches) {
+      final tag = match.group(1)?.toLowerCase();
+      final content = match.group(2);
+      final plain = match.group(3);
+
+      if (plain != null && plain.isNotEmpty) {
+        spans.add(TextSpan(text: _decodeHtmlEntities(plain), style: baseStyle));
+      } else if (tag != null && content != null) {
+        TextStyle inlineStyle = baseStyle;
+        if (tag == 'b' || tag == 'strong') {
+          inlineStyle = inlineStyle.copyWith(fontWeight: FontWeight.bold);
+        } else if (tag == 'i' || tag == 'em') {
+          inlineStyle = inlineStyle.copyWith(fontStyle: FontStyle.italic);
+        } else if (tag == 'u') {
+          inlineStyle = inlineStyle.copyWith(decoration: TextDecoration.underline);
+        } else if (tag == 's' || tag == 'strike') {
+          inlineStyle = inlineStyle.copyWith(decoration: TextDecoration.lineThrough);
+        }
+
+        final rawFullMatch = match.group(0) ?? '';
+        final colorMatch = RegExp(r'color:\s*([^;"]+)', caseSensitive: false).firstMatch(rawFullMatch);
+        if (colorMatch != null) {
+          final colorStr = colorMatch.group(1)!.trim().toLowerCase();
+          final parsedColor = _parseCssColor(colorStr);
+          if (parsedColor != null) {
+            inlineStyle = inlineStyle.copyWith(color: parsedColor);
+          }
+        }
+
+        spans.addAll(_parseInlineSpans(content, baseStyle: inlineStyle));
+      }
+    }
+
+    return spans;
+  }
+
+  String _stripTags(String input) {
+    return _decodeHtmlEntities(input.replaceAll(RegExp(r'<[^>]*>'), ''));
+  }
+
+  String _decodeHtmlEntities(String input) {
+    return input
+        .replaceAll('&nbsp;', ' ')
+        .replaceAll('&amp;', '&')
+        .replaceAll('&lt;', '<')
+        .replaceAll('&gt;', '>')
+        .replaceAll('&quot;', '"')
+        .replaceAll('&#39;', "'");
+  }
+
+  Color? _parseCssColor(String str) {
+    if (str.startsWith('#')) {
+      final hex = str.replaceAll('#', '');
+      if (hex.length == 6) {
+        return Color(int.parse('0xFF$hex'));
+      }
+    } else if (str.startsWith('rgb')) {
+      final match = RegExp(r'\d+').allMatches(str).toList();
+      if (match.length >= 3) {
+        final r = int.parse(match[0].group(0)!);
+        final g = int.parse(match[1].group(0)!);
+        final b = int.parse(match[2].group(0)!);
+        return Color.fromRGBO(r, g, b, 1.0);
+      }
+    }
+    return null;
+  }
+}
+
+enum _BlockType { paragraph, heading, listItem, blockquote }
+
+class _HtmlBlock {
+  final _BlockType type;
+  final String text;
+  final int level;
+  final String? bulletPrefix;
+
+  _HtmlBlock({
+    required this.type,
+    required this.text,
+    this.level = 2,
+    this.bulletPrefix,
+  });
+}
+
+
+

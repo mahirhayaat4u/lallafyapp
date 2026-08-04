@@ -184,18 +184,20 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
               TextSpan(
                 text: _emailController.text.trim(),
                 style: AppTextStyles.body.copyWith(
-                  fontWeight: FontWeight.w600,
+                  fontWeight: FontWeight.w700,
                   color: AppColors.text,
                 ),
               ),
-              const TextSpan(text: '.\nThe link expires in 1 hour.'),
+              const TextSpan(
+                text: '.\n\nPlease open your email in your browser to reset your password. Once done, return here to log in.',
+              ),
             ],
           ),
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: 28),
         AppButton(
-          label: 'Back to Login',
+          label: 'Return to Login Screen 🔐',
           onPressed: () => context.go('/login'),
         ),
         const SizedBox(height: 12),

@@ -95,6 +95,14 @@ class AppDrawer extends ConsumerWidget {
                   },
                 ),
                 _drawerTile(
+                  icon: Icons.monetization_on_outlined,
+                  label: 'Fun Coins & Rewards 🪙',
+                  onTap: () {
+                    context.pop();
+                    context.push('/fun-coins');
+                  },
+                ),
+                _drawerTile(
                   icon: Icons.favorite_border_rounded,
                   label: 'My Wishlist',
                   onTap: () {

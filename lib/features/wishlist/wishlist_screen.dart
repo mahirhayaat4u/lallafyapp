@@ -113,24 +113,26 @@ class _WishlistScreenState extends ConsumerState<WishlistScreen> {
                           ),
                         ),
                         Expanded(
-                          child: GridView.builder(
-                            padding: const EdgeInsets.only(
-                                left: 16, right: 16, top: 4, bottom: 100),
-                            gridDelegate:
-                                const SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: 2,
-                              childAspectRatio: 0.58,
-                              crossAxisSpacing: 12,
-                              mainAxisSpacing: 12,
-                            ),
-                            itemCount: wishlist.products.length,
-                            itemBuilder: (context, index) => ProductCard(
-                              product: wishlist.products[index],
-                              width: double.infinity,
-                              onTap: () {
-                                context.push(
-                                    '/product/${wishlist.products[index].slug}');
-                              },
+                          child: Container(
+                            color: const Color(0xFFE5E7EB),
+                            child: GridView.builder(
+                              padding: const EdgeInsets.only(bottom: 100),
+                              gridDelegate:
+                                  const SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: 2,
+                                childAspectRatio: 0.65,
+                                crossAxisSpacing: 1,
+                                mainAxisSpacing: 1,
+                              ),
+                              itemCount: wishlist.products.length,
+                              itemBuilder: (context, index) => ProductCard(
+                                product: wishlist.products[index],
+                                width: double.infinity,
+                                onTap: () {
+                                  context.push(
+                                      '/product/${wishlist.products[index].slug}');
+                                },
+                              ),
                             ),
                           ),
                         ),

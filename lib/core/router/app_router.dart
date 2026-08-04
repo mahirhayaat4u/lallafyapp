@@ -17,10 +17,13 @@ import '../../features/orders/orders_screen.dart';
 import '../../features/orders/order_detail_screen.dart';
 import '../../features/profile/profile_screen.dart';
 import '../../features/profile/addresses_screen.dart';
+import '../../features/profile/change_password_screen.dart';
 import '../../features/search/search_screen.dart';
 import '../../features/referral/referral_screen.dart';
+import '../../features/coins/fun_coins_screen.dart';
 import '../../features/support/support_screen.dart';
 import '../../features/support/terms_screen.dart';
+import '../../features/reels/reels_screen.dart';
 import '../widgets/bottom_nav_shell.dart';
 import '../../providers/auth_provider.dart';
 
@@ -50,7 +53,7 @@ GoRouter createRouter(Ref ref) {
           state.matchedLocation == '/forgot-password';
 
       // Protected routes — redirect to login if not authenticated
-      final protectedRoutes = ['/checkout', '/orders', '/profile', '/wishlist', '/addresses'];
+      final protectedRoutes = ['/checkout', '/orders', '/profile', '/wishlist', '/addresses', '/fun-coins'];
       final isProtected = protectedRoutes.any(
           (route) => state.matchedLocation.startsWith(route));
       if (!isLoggedIn && isProtected) return '/login';
@@ -156,7 +159,18 @@ GoRouter createRouter(Ref ref) {
             ],
           ),
 
-          // ── Tab 2: Categories ──
+          // ── Tab 2: Reels ──
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/reels',
+                name: 'reels',
+                builder: (context, state) => const ReelsScreen(),
+              ),
+            ],
+          ),
+
+          // ── Tab 3: Categories ──
           StatefulShellBranch(
             routes: [
               GoRoute(
@@ -167,7 +181,7 @@ GoRouter createRouter(Ref ref) {
             ],
           ),
 
-          // ── Tab 3: Profile ──
+          // ── Tab 4: Profile ──
           StatefulShellBranch(
             routes: [
               GoRoute(
@@ -244,6 +258,16 @@ GoRouter createRouter(Ref ref) {
         path: '/referral',
         name: 'referral',
         builder: (context, state) => const ReferralScreen(),
+      ),
+      GoRoute(
+        path: '/fun-coins',
+        name: 'fun-coins',
+        builder: (context, state) => const FunCoinsScreen(),
+      ),
+      GoRoute(
+        path: '/change-password',
+        name: 'change-password',
+        builder: (context, state) => const ChangePasswordScreen(),
       ),
     ],
 

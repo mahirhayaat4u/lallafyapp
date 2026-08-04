@@ -1033,7 +1033,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Use Supercoins',
+                              'Use Fun Coins',
                               style: AppTextStyles.bodySm.copyWith(
                                 fontWeight: FontWeight.w700,
                                 color: const Color(0xFF92400E),

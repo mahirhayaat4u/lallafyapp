@@ -70,6 +70,11 @@ class ApiConstants {
   // ─── Contact ─────────────────────────────────────────────
   static const String contact = '/contacts';
 
+  // ─── Loyalty & Referral ──────────────────────────────────
+  static const String loyaltyBalance = '/loyalty/balance';
+  static const String loyaltySettings = '/loyalty/settings';
+  static const String loyaltyHistory = '/loyalty/history';
+
   // ─── Aliases for compatibility & fallbacks ─────────────
   static const String refresh = '/auth/refresh';
   static String productBySlug(String slug) => '/products/$slug';

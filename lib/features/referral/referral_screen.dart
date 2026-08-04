@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
@@ -61,7 +62,7 @@ class _ReferralScreenState extends ConsumerState<ReferralScreen> {
     if (_referralCode.isEmpty) return;
     SharePlus.instance.share(
       ShareParams(
-        text: '🎉 Use my referral code "$_referralCode" on Lallafy and get Supercoins on your first order!\n\nDownload now: https://lallafy.com',
+        text: '🎉 Use my referral code "$_referralCode" on Lallafy and get Fun Coins on your first order!\n\nDownload now: https://lallafy.com',
       ),
     );
   }
@@ -83,7 +84,7 @@ class _ReferralScreenState extends ConsumerState<ReferralScreen> {
     return Scaffold(
       backgroundColor: AppColors.bg,
       appBar: AppBar(
-        title: const Text('Supercoins & Referrals'),
+        title: const Text('Fun Coins & Referrals'),
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
@@ -94,6 +95,10 @@ class _ReferralScreenState extends ConsumerState<ReferralScreen> {
                 children: [
                   // ── Supercoin Balance Card ──
                   _buildBalanceCard(),
+                  const SizedBox(height: 12),
+
+                  // ── Buy Coins Button ──
+                  _buildBuyCoinsButton(),
                   const SizedBox(height: 20),
 
                   // ── Referral Code Card ──
@@ -150,7 +155,7 @@ class _ReferralScreenState extends ConsumerState<ReferralScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Your Supercoins',
+                      'Your Fun Coins',
                       style: AppTextStyles.bodySm.copyWith(
                         color: Colors.white.withOpacity(0.9),
                         fontWeight: FontWeight.w500,
@@ -190,6 +195,70 @@ class _ReferralScreenState extends ConsumerState<ReferralScreen> {
     );
   }
 
+  Widget _buildBuyCoinsButton() {
+    return GestureDetector(
+      onTap: () => context.push('/fun-coins'),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [Color(0xFFE91E63), Color(0xFFD81B60)],
+            begin: Alignment.centerLeft,
+            end: Alignment.centerRight,
+          ),
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFFE91E63).withOpacity(0.25),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(Icons.shopping_bag_rounded,
+                  color: Colors.white, size: 20),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Buy Fun Coins',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 15,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Get coin packs & save more on orders',
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.8),
+                      fontSize: 11,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.arrow_forward_ios_rounded,
+                color: Colors.white, size: 16),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildReferralCard() {
     final referralReward = _loyaltySettings?['referral_reward_coins'] ?? 50;
     final refereeWelcome = _loyaltySettings?['referee_welcome_coins'] ?? 50;
@@ -216,7 +285,7 @@ class _ReferralScreenState extends ConsumerState<ReferralScreen> {
           ),
           const SizedBox(height: 8),
           Text(
-            'Invite friends and earn $referralReward Supercoins when they make their first purchase! Your friend gets $refereeWelcome coins too.',
+            'Invite friends and earn $referralReward Fun Coins when they make their first purchase! Your friend gets $refereeWelcome coins too.',
             style: AppTextStyles.bodySm.copyWith(
               color: AppColors.textMuted,
               height: 1.5,
@@ -375,17 +444,17 @@ class _ReferralScreenState extends ConsumerState<ReferralScreen> {
           _howItWorksItem(
             icon: '🛒',
             title: 'Shop & Earn',
-            description: 'Earn $earnRate Supercoin for every ₹100 spent on orders.',
+            description: 'Earn $earnRate Fun Coin for every ₹100 spent on orders.',
           ),
           _howItWorksItem(
             icon: '💰',
             title: 'Redeem at Checkout',
-            description: 'Use Supercoins to get discounts (up to $maxRedeemPercent% of order value).',
+            description: 'Use Fun Coins to get discounts (up to $maxRedeemPercent% of order value).',
           ),
           _howItWorksItem(
             icon: '🎁',
             title: 'Refer Friends',
-            description: 'Share your code and both of you earn Supercoins!',
+            description: 'Share your code and both of you earn Fun Coins!',
           ),
         ],
       ),

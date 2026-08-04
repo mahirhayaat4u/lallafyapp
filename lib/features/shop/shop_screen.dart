@@ -1301,23 +1301,25 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
                       },
                     );
                   }
-                  return GridView.builder(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 4),
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2,
-                      childAspectRatio: 0.66,
-                      crossAxisSpacing: 12,
-                      mainAxisSpacing: 12,
-                    ),
-                    itemCount: products.length,
-                    itemBuilder: (context, index) => ProductCard(
-                      product: products[index],
-                      width: double.infinity,
-                      onTap: () {
-                        context.push('/product/${products[index].id}');
-                      },
+                  return Container(
+                    color: const Color(0xFFE5E7EB),
+                    child: GridView.builder(
+                      padding: EdgeInsets.zero,
+                      gridDelegate:
+                          const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 2,
+                        childAspectRatio: 0.65,
+                        crossAxisSpacing: 1,
+                        mainAxisSpacing: 1,
+                      ),
+                      itemCount: products.length,
+                      itemBuilder: (context, index) => ProductCard(
+                        product: products[index],
+                        width: double.infinity,
+                        onTap: () {
+                          context.push('/product/${products[index].id}');
+                        },
+                      ),
                     ),
                   );
                 },

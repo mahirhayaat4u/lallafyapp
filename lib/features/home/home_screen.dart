@@ -37,6 +37,7 @@ import 'widgets/musical_toys_section.dart';
 import 'widgets/occasion_tabs_section.dart';
 import 'widgets/gifting_stories_section.dart';
 import 'widgets/relationship_section.dart';
+import 'widgets/fun_coins_section.dart';
 
 /// Home Screen — The real homepage with API-driven content
 ///
@@ -212,6 +213,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                     // ── 1. Hero banner carousel (Top) ──
                     _BannersSection(),
 
+                    const SizedBox(height: 14),
+
+                    // ── 1.5. Fun Coins Mini Strip ──
+                    const FunCoinsMiniSection(),
+
                     const SizedBox(height: 16),
 
                     // ── 2. Shop by Category (Dynamic Age Groups from backend) ──
@@ -232,27 +238,27 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
               // ── 5. Best Sellers Section (from BestSellerCarousal.jsx) ──
               const BestSellerSection(),
 
-              const SizedBox(height: 24),
+              const SizedBox(height: 56),
 
               // ── 6. Magic of Gifting Section (from MagicOfGifting.jsx / Admin SectionBanner) ──
               const MagicOfGiftingSection(),
 
-              const SizedBox(height: 24),
+              const SizedBox(height: 56),
 
               // ── 7. My First Toy Section (from Myfirstyear.jsx / Admin SectionBanner / ageGroup=0–1 Years) ──
               const MyFirstYearSection(),
 
-              const SizedBox(height: 24),
+              const SizedBox(height: 56),
 
               // ── 8. Trending Toys Section (from TrendingToys.jsx / Admin SectionBanner / section=trending) ──
               const TrendingToysSection(),
 
-              const SizedBox(height: 24),
+              const SizedBox(height: 56),
 
               // ── 9. Skill Development Section (from SkillDevelopment.jsx / Admin SectionBanner / section=skill) ──
               const SkillDevelopmentSection(),
 
-              const SizedBox(height: 24),
+              const SizedBox(height: 56),
 
               // ── 10. Musical Toys Section (from MusicalToys.jsx / Admin SectionBanner / section=musical) ──
               const MusicalToysSection(),
@@ -450,21 +456,21 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
             child: GestureDetector(
               onTap: () => context.push('/search'),
               child: Container(
-                height: 48,
+                height: 40,
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.circular(24),
-                  border: Border.all(color: const Color(0xFFE2E8F0), width: 1.2),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: const Color(0xFFE2E8F0), width: 1),
                 ),
                 child: Row(
                   children: [
-                    const SizedBox(width: 16),
+                    const SizedBox(width: 14),
                     Expanded(
                       child: Text(
                         'Search for toys, gifts & more...',
                         style: TextStyle(
                           color: Colors.grey.shade500,
-                          fontSize: 14,
+                          fontSize: 12.5,
                           fontWeight: FontWeight.w400,
                         ),
                         overflow: TextOverflow.ellipsis,
@@ -472,19 +478,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                     ),
                     // Pink Search Button
                     Container(
-                      height: 48,
-                      width: 52,
+                      height: 40,
+                      width: 44,
                       decoration: const BoxDecoration(
                         color: Color(0xFFE91E63),
                         borderRadius: BorderRadius.only(
-                          topRight: Radius.circular(23),
-                          bottomRight: Radius.circular(23),
+                          topRight: Radius.circular(19),
+                          bottomRight: Radius.circular(19),
                         ),
                       ),
                       child: const Icon(
                         Icons.search_rounded,
                         color: Colors.white,
-                        size: 24,
+                        size: 20,
                       ),
                     ),
                   ],

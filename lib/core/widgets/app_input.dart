@@ -71,6 +71,7 @@ class AppInput extends StatelessWidget {
           cursorColor: AppColors.primary,
           decoration: InputDecoration(
             hintText: hint,
+            hintStyle: AppTextStyles.inputHint.copyWith(color: const Color(0xB3000000)),
             errorText: errorText,
             prefixIcon: prefixIcon,
             suffixIcon: suffixIcon,

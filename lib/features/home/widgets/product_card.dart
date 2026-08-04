@@ -45,14 +45,12 @@ class _ProductCardState extends ConsumerState<ProductCard> {
     final double originalPrice = product.originalPrice;
     final int discountPercent = product.discountPercent;
 
-    // Badge label logic
+    // Badge label logic (Best Seller / Trending only)
     String? badgeLabel;
     if (product.isBestSeller) {
       badgeLabel = 'Best Seller';
     } else if (product.isFeatured) {
       badgeLabel = 'Trending';
-    } else if (discountPercent > 0) {
-      badgeLabel = '$discountPercent% OFF';
     }
 
     return GestureDetector(
@@ -61,15 +59,8 @@ class _ProductCardState extends ConsumerState<ProductCard> {
         width: widget.width,
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: const Color(0xFFEEEEEE), width: 1),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.04),
-              blurRadius: 10,
-              offset: const Offset(0, 3),
-            ),
-          ],
+          borderRadius: BorderRadius.zero,
+          border: Border.all(color: const Color(0xFFE5E7EB), width: 0.5),
         ),
         clipBehavior: Clip.antiAlias,
         child: Column(

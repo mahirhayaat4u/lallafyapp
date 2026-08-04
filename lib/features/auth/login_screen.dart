@@ -151,6 +151,79 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
             ),
           ),
 
+          // ── Top Navigation Bar (Back to Home / Explore) ──
+          SafeArea(
+            child: Align(
+              alignment: Alignment.topCenter,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    // Back to previous screen / Home
+                    GestureDetector(
+                      onTap: () {
+                        if (context.canPop()) {
+                          context.pop();
+                        } else {
+                          context.go('/home');
+                        }
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.06),
+                              blurRadius: 10,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: const Icon(
+                          Icons.arrow_back_rounded,
+                          color: AppColors.text,
+                          size: 20,
+                        ),
+                      ),
+                    ),
+
+                    // Skip to Home button
+                    TextButton.icon(
+                      onPressed: () => context.go('/home'),
+                      icon: const Icon(
+                        Icons.storefront_rounded,
+                        size: 16,
+                        color: AppColors.primary,
+                      ),
+                      label: Text(
+                        'Explore Home',
+                        style: AppTextStyles.bodyXs.copyWith(
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      style: TextButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 6),
+                        elevation: 1,
+                        shadowColor: Colors.black.withValues(alpha: 0.08),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20),
+                          side: const BorderSide(
+                              color: Color(0xFFFFD1DC), width: 1),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+
           // ── Content ──
           SafeArea(
             child: Center(
